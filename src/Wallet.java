@@ -1,13 +1,28 @@
+import java.util.UUID;
+
 public class Wallet extends WalletBase implements IWallet {
 
 	// Alias público/identificador de la wallet
 	private String alias;
+
+	// Identificador del usuario propietario . Puede ser null si no está asignada.
+	private UUID ownerId;
 
 	// Balance en caché para evitar recalcular constantemente
 	private float cachedBalance = 0.0f;
 
 	public Wallet(String alias) {
 		this.alias = alias;
+	}
+
+	// Constructor que enlaza la wallet con un User
+	public Wallet(String alias, User owner) {
+		this.alias = alias;
+		if (owner != null) {
+			this.ownerId = owner.getUserId();
+			// Mantener sincronizado el alias en el User
+			owner.setAlias(alias);
+		}
 	}
 
 	public String getAlias() {
@@ -21,6 +36,10 @@ public class Wallet extends WalletBase implements IWallet {
 
 	public void setAlias(String alias) {
 		this.alias = alias;
+	}
+
+	public UUID getOwnerId() {
+		return ownerId;
 	}
 
 
