@@ -17,7 +17,7 @@ public class Blockchain {
         this.chain = new ArrayList<>();
         // Genesis block
         Block genesis = new Block(0, new ArrayList<>(), "0");
-        genesis.hash = genesis.calculateHash();
+        genesis.setHash(genesis.calculateHash());
         chain.add(genesis);
     }
 
@@ -42,12 +42,12 @@ public class Blockchain {
         }
         List<Transaction> transactionsToMine = new ArrayList<>(pendingTransactions);
 
-        Block newBlock = new Block(chain.size(), transactionsToMine, getLatestBlock().hash);
+        Block newBlock = new Block(chain.size(), transactionsToMine, getLatestBlock().getHash());
         // Proof of Work
         String target = new String(new char[difficulty]).replace('\0', '0');
-        while (!newBlock.hash.substring(0, difficulty).equals(target)) {
-            newBlock.nonce++;
-            newBlock.hash = newBlock.calculateHash();
+        while (!newBlock.getHash().substring(0, difficulty).equals(target)) {
+            newBlock.incrementNonce();
+            newBlock.setHash(newBlock.calculateHash());
         }
 
         // Validar transacciones del bloque
@@ -65,14 +65,14 @@ public class Blockchain {
         this.pendingTransactions.add(rewardTx);
         this.txPool.addTransaction(rewardTx);
 
-        System.out.println("Bloque minado y añadido a la cadena: " + newBlock.hash);
+        System.out.println("Bloque minado y añadido a la cadena: " + newBlock.getHash());
     }
 
     public float getBalance(String address) {
         float balance = 0.0f;
         // Revisar todos los bloques
         for (Block block : chain) {
-            for (Transaction tx : block.transactions) {
+            for (Transaction tx : block.getTransactions()) {
                 if (address.equals(tx.fromAddress)) {
                     balance -= tx.amount;
                 }
@@ -102,8 +102,8 @@ public class Blockchain {
             Block current = chain.get(i);
             Block previous = chain.get(i - 1);
 
-            if (!current.hash.equals(current.calculateHash())) return false;
-            if (!current.prevHash.equals(previous.hash)) return false;
+            if (!current.getHash().equals(current.calculateHash())) return false;
+            if (!current.getPrevHash().equals(previous.getHash())) return false;
             if (!current.hasValidTransactions()) return false;
         }
         return true;

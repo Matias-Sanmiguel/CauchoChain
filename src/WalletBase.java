@@ -4,14 +4,12 @@ import java.util.Base64;
 
 public abstract class WalletBase {
 
-	// Par de claves (privada/publica)
 	private KeyPair privateKey;
-
-	// Representación en String (Base64) de la clave pública — usada como address
+	// stringuear la public key
 	private String publicKey;
 
 	public WalletBase() {
-		// Generar par de claves al crear la wallet
+		// creacion de la wallet en si mediante la creacion de claves
 		CryptoUtils cu = new CryptoUtils();
 		this.privateKey = cu.generateKeyPair();
 		PublicKey pk = this.privateKey.getPublic();
@@ -19,28 +17,28 @@ public abstract class WalletBase {
 	}
 
 
-	//Devuelve la dirección (representación de la clave pública).
+	//da la clave publica
 	public String getAddress() {
 		return publicKey;
 	}
 
 	
-	 //Firma los datos con la clave privada de esta wallet y devuelve la firma (Base64).
+	 //firma y devuelve la firma
 	public String signData(String data) {
 		CryptoUtils cu = new CryptoUtils();
 		return cu.sign(data, privateKey);
 	}
 
-	//Verifica que la firma `sig` corresponde a `data` usando la clave pública de esta wallet.
+	//ver si coinciden las firmas
 	public boolean verify(String sig, String data) {
 		CryptoUtils cu = new CryptoUtils();
 		// CryptoUtils.verify toma (data, signature, KeyPair)
 		return cu.verify(data, sig, privateKey);
 	}
 
-	// Exponer el KeyPair protegido en caso de que subclases lo necesiten
+	// hicimos esto para poder mostrar el keypar mas tarde en las sublcases
 	protected KeyPair getKeyPair() {
-		return privateKey;
+        return privateKey;
 	}
 }
 
