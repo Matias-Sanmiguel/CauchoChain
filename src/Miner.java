@@ -35,7 +35,7 @@ public class Miner {
 
         Block newBlock = new Block(bc.chain.size(), transactionsToMine, bc.getLatestBlock().getHash());
 
-        int difficulty = 3; //numero de ceros que debe tener el hash al inicio
+        int difficulty = bc.getDifficulty(); // saca la diff desde blockchain
 
         String target = new String(new char[difficulty]).replace('\0', '0');
 
@@ -60,7 +60,9 @@ public class Miner {
         bc.txPool.removeTransactions(transactionsToMine); //elimina las transacciones minadas del pool de transacciones
         bc.pendingTransactions.removeAll(transactionsToMine); //elimina las transacciones minadas de las transacciones pendientes
 
-        float miningReward = 50.0f;
+        float miningReward = bc.getMiningReward(); // saca la reward de la blockchain con el getter
+
+
         Transaction rewardTx = new Transaction(null, wallet.getAddress(), miningReward);
         // crea una transaccion de recompensa hacia la direccion del minero
         bc.pendingTransactions.add(rewardTx); //añade la transaccion de recompensa a las transacciones pendientes

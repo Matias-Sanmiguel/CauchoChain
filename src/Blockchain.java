@@ -22,11 +22,11 @@ public class Blockchain {
     }
 
     public Block getLatestBlock() {
-        return chain.get(chain.size() - 1);
+        return chain.getLast();
     }
 
     // Agrega transacción al pool y a pendingTransactions
-    public void createTransaction(Transaction tx) {
+    public void createTransaction(@org.jetbrains.annotations.NotNull Transaction tx) {
         if (!tx.isValid()) {
             throw new RuntimeException("Transacción inválida, no se puede añadir.");
         }
@@ -107,5 +107,13 @@ public class Blockchain {
             if (!current.hasValidTransactions()) return false;
         }
         return true;
+    }
+
+    public int getDifficulty() {
+        return difficulty;
+    }
+
+    public float getMiningReward() {
+        return miningReward;
     }
 }

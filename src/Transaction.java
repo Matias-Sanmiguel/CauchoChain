@@ -1,5 +1,3 @@
-// filepath: /home/cauchothegaucho/Repositorios/Cauchochain/CauchoChain/src/Transaction.java
-
 import java.security.KeyPair;
 
 public class Transaction {
