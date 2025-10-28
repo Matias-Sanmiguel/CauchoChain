@@ -34,8 +34,8 @@ public abstract class WalletBase {
 	//Verifica que la firma `sig` corresponde a `data` usando la clave pública de esta wallet.
 	public boolean verify(String sig, String data) {
 		CryptoUtils cu = new CryptoUtils();
-		// CryptoUtils.verify toma (data, signature, KeyPair)
-		return cu.verify(data, sig, privateKey);
+			// CryptoUtils.verify toma (data, signature, KeyPair)
+			return cu.verify(data, sig, privateKey);
 	}
 
 	// Exponer el KeyPair protegido en caso de que subclases lo necesiten
