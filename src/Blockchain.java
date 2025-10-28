@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 
-public class Blockchain {
+public class Blockchain extends BlockchainCore {
     public List<Transaction> pendingTransactions;
     public ContractRegistry contractRegistry;
     public TransactionPool txPool;
@@ -16,7 +16,7 @@ public class Blockchain {
         this.txPool = new TransactionPool();
         this.chain = new ArrayList<>();
         // Genesis block
-        Block genesis = new Block(0, new ArrayList<>(), "0");
+        Block genesis = new Block(0, new ArrayList<>(), "0", "GENESIS");
         genesis.setHash(genesis.calculateHash());
         chain.add(genesis);
     }
@@ -42,7 +42,7 @@ public class Blockchain {
         }
         List<Transaction> transactionsToMine = new ArrayList<>(pendingTransactions);
 
-        Block newBlock = new Block(chain.size(), transactionsToMine, getLatestBlock().getHash());
+        Block newBlock = new Block(chain.size(), transactionsToMine, getLatestBlock().getHash(), miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
         // Proof of Work
         String target = new String(new char[difficulty]).replace('\0', '0');
         while (!newBlock.getHash().substring(0, difficulty).equals(target)) {

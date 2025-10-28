@@ -12,11 +12,13 @@ public class Block {
     private List<Transaction> transactions;
     private int nonce;
     private static final CryptoUtils crypto = new CryptoUtils();
+    private String minerAddress;
 
 
-    public Block(int index, List<Transaction> transactions, String prevHash) {
+    public Block(int index, List<Transaction> transactions, String prevHash, String minerAddress) {
         this.index = index;
         this.transactions = new ArrayList<>(transactions);
+        this.minerAddress = minerAddress;
         this.prevHash = prevHash;
         this.nonce = 0;
         this.timestamp = new Date();
@@ -95,6 +97,10 @@ public class Block {
 
     public int getIndex() {
         return index;
+    }
+
+    public String getMinerAddress() {
+        return minerAddress;     
     }
 
 }
