@@ -22,11 +22,11 @@ public class Blockchain extends BlockchainCore {
     }
 
     public Block getLatestBlock() {
-        return chain.get(chain.size() - 1);
+        return chain.getLast();
     }
 
     // Agrega transacción al pool y a pendingTransactions
-    public void createTransaction(Transaction tx) {
+    public void createTransaction(@org.jetbrains.annotations.NotNull Transaction tx) {
         if (!tx.isValid()) {
             throw new RuntimeException("Transacción inválida, no se puede añadir.");
         }
@@ -109,30 +109,11 @@ public class Blockchain extends BlockchainCore {
         return true;
     }
 
-    @Override
-    public void addBlock(Block newBlock) {
+    public int getDifficulty() {
+        return difficulty;
+    }
 
-        super.addBlock(newBlock);
-        // Si el bloque fue agregado, podemos aplicar acciones adicionales
-        if (chain.contains(newBlock)) {
-            // Recompensa al minero (si está dentro del bloque)
-            Transaction rewardTx = new Transaction(
-                "SYSTEM", 
-                newBlock.getMinerAddress(), 
-                reward
-            );
-            txPool.addTransaction(rewardTx);
-
-            System.out.println("💰 Recompensa de " + reward + " otorgada a " + newBlock.getMinerAddress());
-
-            // Ajustar la dificultad cada cierto tiempo
-            adjustDifficulty();
-
-            // Limpiar transacciones procesadas
-            txPool.clear();
-
-            // Registrar en logs o auditoría
-            System.out.println("🧱 Nuevo bloque confirmado en la cadena. Altura actual: " + chain.size());
-        }
+    public float getMiningReward() {
+        return miningReward;
     }
 }
