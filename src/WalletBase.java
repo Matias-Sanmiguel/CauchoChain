@@ -32,8 +32,8 @@ public abstract class WalletBase {
 	//ver si coinciden las firmas
 	public boolean verify(String sig, String data) {
 		CryptoUtils cu = new CryptoUtils();
-		// CryptoUtils.verify toma (data, signature, KeyPair)
-		return cu.verify(data, sig, privateKey);
+			// CryptoUtils.verify toma (data, signature, KeyPair)
+			return cu.verify(data, sig, privateKey);
 	}
 
 	// hicimos esto para poder mostrar el keypar mas tarde en las sublcases
