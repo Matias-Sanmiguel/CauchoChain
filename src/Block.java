@@ -13,6 +13,7 @@ public class Block {
     private int nonce;
     private static final CryptoUtils crypto = new CryptoUtils();
     private String minerAddress;
+    private String signature; // firma del bloque (opcional)
 
 
     public Block(int index, List<Transaction> transactions, String prevHash, String minerAddress) {
@@ -23,6 +24,24 @@ public class Block {
         this.nonce = 0;
         this.timestamp = new Date();
         this.hash = calculateHash();
+    }
+
+    public Block(int index, List<Transaction> transactions, String prevHash, String minerAddress, long timestampMillis) {
+        this.index = index;
+        this.transactions = new ArrayList<>(transactions);
+        this.minerAddress = minerAddress;
+        this.prevHash = prevHash;
+        this.nonce = 0;
+        this.timestamp = new Date(timestampMillis);
+        this.hash = calculateHash();
+    }
+
+    public String getSignature() {
+        return signature;
+    }
+
+    public void setSignature(String signature) {
+        this.signature = signature;
     }
 
     // Concatena todoo para generar el hash del bloque
@@ -62,7 +81,6 @@ public class Block {
         return true;
     }
 
-    // Getters y setters para cumplir con encapsulamiento
     public String getHash() {
         return hash;
     }
