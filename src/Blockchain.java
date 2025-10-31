@@ -5,29 +5,26 @@ public class Blockchain extends BlockchainCore {
     public List<Transaction> pendingTransactions;
     public ContractRegistry contractRegistry;
     public TransactionPool txPool;
-    public List<Block> chain;
 
     private int difficulty = 3; // cuantos ceros iniciales en el hash para el PoW
     private float miningReward = 50.0f;
 
     public Blockchain() {
+        // BlockchainCore() ya inicializa `chain` y crea el genesis
+        super();
         this.pendingTransactions = new ArrayList<>();
         this.contractRegistry = new ContractRegistry();
         this.txPool = new TransactionPool();
-        this.chain = new ArrayList<>();
-        // Genesis block
-        Block genesis = new Block(0, new ArrayList<>(), "0", "GENESIS");
-        genesis.setHash(genesis.calculateHash());
-        chain.add(genesis);
+        // no volver a crear genesis ni reasignar `chain`
     }
 
     public Block getLatestBlock() {
-        return chain.getLast();
+        return getLastBlock();
     }
 
     // Agrega transacción al pool y a pendingTransactions
-    public void createTransaction(@org.jetbrains.annotations.NotNull Transaction tx) {
-        if (!tx.isValid()) {
+    public void createTransaction(Transaction tx) {
+        if (tx == null || !tx.isValid()) {
             throw new RuntimeException("Transacción inválida, no se puede añadir.");
         }
         this.pendingTransactions.add(tx);
@@ -42,7 +39,10 @@ public class Blockchain extends BlockchainCore {
         }
         List<Transaction> transactionsToMine = new ArrayList<>(pendingTransactions);
 
-        Block newBlock = new Block(chain.size(), transactionsToMine, getLatestBlock().getHash(), miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
+        Block latest = getLatestBlock();
+        String prevHash = (latest == null) ? "0" : latest.getHash();
+
+        Block newBlock = new Block(chain.size(), transactionsToMine, prevHash, miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
         // Proof of Work
         String target = new String(new char[difficulty]).replace('\0', '0');
         while (!newBlock.getHash().substring(0, difficulty).equals(target)) {

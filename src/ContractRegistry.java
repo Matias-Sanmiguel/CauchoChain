@@ -22,10 +22,11 @@ public class ContractRegistry {
     
     //Despliega un smart contract en el registro.
     //El registro se establecerá en el contrato para mantener la relación de composición.
-    public void deploy(SmartContract sc) {
+    public String deploy(SmartContract sc) {
         if (sc == null) throw new IllegalArgumentException("SmartContract cannot be null");
         sc.setRegistry(this);
         contracts.add(sc);
+        return sc.getId() == null ? null : sc.getId().toString();
     }
 
     

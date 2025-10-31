@@ -33,7 +33,12 @@ public class Miner {
         List<Transaction> transactionsToMine = new ArrayList<>(bc.pendingTransactions);
 
 
-        Block newBlock = new Block(bc.chain.size(), transactionsToMine, bc.getLatestBlock().getHash());
+        // calcular prevHash de forma segura
+        Block latest = bc.getLatestBlock();
+        String prevHash = (latest == null) ? "0" : latest.getHash();
+
+        // crear bloque con la dirección del minero
+        Block newBlock = new Block(bc.chain.size(), transactionsToMine, prevHash, this.getAddress());
 
         int difficulty = bc.getDifficulty(); // saca la diff desde blockchain
 
