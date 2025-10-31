@@ -12,7 +12,7 @@ public class ContractRegistry {
     private final Blockchain blockchain;
 
     public ContractRegistry() {
-        this.blockchain = new Blockchain();
+        this.blockchain = null;
     }
 
     public ContractRegistry(Blockchain blockchain) {

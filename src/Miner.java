@@ -1,6 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
-public class Miner {
+public class Miner implements IMiner {
     private float hashMined;
     private float hashRate;
     private Wallet wallet;

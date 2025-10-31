@@ -66,12 +66,19 @@ public class Wallet extends WalletBase implements IWallet {
 		}
 
 		Transaction tx = new Transaction(this.alias, to, amt);
+
+
+        // firma la transaccion con el keypar de la wallet
+		try {
+			java.security.KeyPair kp = getKeyPair();
+			tx.signTransaction(kp);
+		} catch (Exception e) {
+			// Si falla la firma, lanzar para que el llamador sepa
+			throw new RuntimeException("Error al firmar la transacción: " + e.getMessage(), e);
+		}
 	
 		return tx;
 	}
-    // 1. Verifica que el monto sea positivo.
-    // 2. Verifica que haya fondos suficientes en la wallet.
-    // 3. Crea y devuelve una nueva transacción.
 
 	public float getCachedBalance() {
 		return cachedBalance;

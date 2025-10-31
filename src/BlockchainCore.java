@@ -17,50 +17,55 @@ public abstract class BlockchainCore {
         this.difficulty = 2; // nivel inicial de dificultad
         this.reward = 50f;   // recompensa por bloque minado
 
-        // Crear bloque génesis
-        Block genesis = new Block(0, new ArrayList<>(), "0", "GENESIS");
+
+        Block genesis = new Block(0, new ArrayList<>(), "0", "GENESIS", 0L);
         chain.add(genesis);
     }
 
-    // MÉTODOS PÚBLICOS
 
-    /** Agrega un bloque a la cadena si es válido */
+    // agregar el bloque con todos los chequeos
     public void addBlock(Block newBlock) {
         Block lastBlock = getLastBlock();
 
-        // 1️⃣ Verificar hash previo
+        // ignorar si el bloque es igal al anterior
+        if (newBlock.getHash().equals(lastBlock.getHash())) {
+            System.out.println("Info: bloque ya presente, ignorando.");
+            return;
+        }
+
+        // ver si coincide el hash
         if (!newBlock.getPrevHash().equals(lastBlock.getHash())) {
             System.out.println("Error: hash previo no coincide. Bloque rechazado.");
             return;
         }
 
-        // 2️⃣ Validar transacciones
+        // validar si las transacciones son balidas
         if (!newBlock.hasValidTransactions()) {
             System.out.println("Error: transacciones inválidas en el bloque.");
             return;
         }
 
-        // 3️⃣ Validar hash del bloque
+        // versi es valido el bloque
         String recalculated = newBlock.calculateHash();
         if (!recalculated.equals(newBlock.getHash())) {
             System.out.println("Error: hash inválido para el bloque.");
             return;
         }
 
-        // 4️⃣ Agregarlo
+        // agregar
         chain.add(newBlock);
         System.out.println("Bloque agregado correctamente con hash: " + newBlock.getHash());
 
-        // 5️⃣ Difundir a otros nodos
+        //️⃣ sincronizar
         broadcastBlock(newBlock);
     }
 
-    /** Devuelve el último bloque de la cadena */
+
     public Block getLastBlock() {
         return chain.get(chain.size() - 1);
     }
 
-    /** Valida toda la cadena (hashes y transacciones) */
+ // validar si la cadena esta bien
     public boolean validateChain() {
         for (int i = 1; i < chain.size(); i++) {
             Block current = chain.get(i);
@@ -86,7 +91,7 @@ public abstract class BlockchainCore {
         return true;
     }
 
-    /** Ajusta la dificultad según el tamaño de la cadena (simplificado) */
+    // Importante, si la cadena es mas larga se aumenta la dificultad
     public void adjustDifficulty() {
         if (chain.size() % 5 == 0 && difficulty < 5) {
             difficulty++;
@@ -94,7 +99,7 @@ public abstract class BlockchainCore {
         }
     }
 
-    /** Difunde un bloque nuevo a los nodos conectados */
+    // conecta los nodos
     public void broadcastBlock(Block b) {
         if (nodes.isEmpty()) return;
 
@@ -104,12 +109,12 @@ public abstract class BlockchainCore {
         }
     }
 
-    /** Agrega un nodo a la lista local */
+    // agregar a la lista
     public void addNode(INetworkNode node) {
         nodes.add(node);
     }
 
-    /** Devuelve todos los nodos conectados */
+    // da la lista de los nodos conectados
     public List<INetworkNode> getNodes() {
         return nodes;
     }
