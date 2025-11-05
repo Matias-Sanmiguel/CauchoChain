@@ -294,6 +294,7 @@ public class BlockchainTUI {
         addLog("TX pendientes: " + blockchain.txPool.getPending().size());
         addLog("Dificultad: " + blockchain.getDifficulty());
         addLog("Recompensa: " + blockchain.getMiningReward());
+        lastState = ""; // ✅ Fuerza redibujado
     }
 
     private void showHelp() {
@@ -303,5 +304,6 @@ public class BlockchainTUI {
         addLog("[S] Ver estadisticas blockchain");
         addLog("[H] Mostrar esta ayuda");
         addLog("[Q] Salir de la aplicacion");
+        lastState = ""; // ✅ Fuerza redibujado
     }
 }
