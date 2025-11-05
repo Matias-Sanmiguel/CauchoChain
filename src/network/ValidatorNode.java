@@ -1,3 +1,7 @@
+package network;
+import model.Block;
+import model.CryptoUtils;
+
 public class ValidatorNode {
     private float stake;
     private String publicKey;

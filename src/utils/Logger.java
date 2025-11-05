@@ -1,11 +1,12 @@
-import java.util.List;
-import java.util.ArrayList;
+package utils;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Logger {
     private final List<String> logs; // Marcado como final para evitar reasignación

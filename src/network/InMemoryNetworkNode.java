@@ -1,3 +1,8 @@
+package network;
+import model.Block;
+import model.Blockchain;
+import model.Transaction;
+
 public class InMemoryNetworkNode implements INetworkNode {
     private String id;
     private String address;
