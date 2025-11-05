@@ -73,7 +73,8 @@ public class Blockchain extends BlockchainCore {
 
     public float getBalance(String address) {
         float balance = 0.0f;
-        // Revisar todos los bloques
+
+        // Solo recorrer transacciones confirmadas (en bloques minados)
         for (Block block : getChain()) {
             for (Transaction tx : block.getTransactions()) {
                 if (address.equals(tx.fromAddress)) {
@@ -84,6 +85,7 @@ public class Blockchain extends BlockchainCore {
                 }
             }
         }
+
         // Revisar transacciones pendientes también
         for (Transaction tx : pendingTransactions) {
             if (address.equals(tx.fromAddress)) {
