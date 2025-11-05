@@ -1,3 +1,4 @@
+package model;
 import java.security.KeyPair;
 
 public class Transaction {

@@ -1,6 +1,8 @@
+package wallet;
 import java.security.KeyPair;
 import java.security.PublicKey;
 import java.util.Base64;
+import model.CryptoUtils;
 
 public abstract class WalletBase {
 

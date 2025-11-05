@@ -1,3 +1,17 @@
+package controller;
+
+import miner.IMiner;
+import miner.Miner;
+import model.Block;
+import model.Blockchain;
+import model.SmartContract;
+import model.Transaction;
+import network.INetworkNode;
+import network.NetworkMediator;
+import network.NetworkMessage;
+import network.SimpleNetworkMediator;
+import utils.Logger;
+
 public class BlockchainController {
     private Blockchain blockchain;
     private NetworkMediator mediator;

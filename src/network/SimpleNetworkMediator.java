@@ -1,7 +1,11 @@
+package network;
 import java.util.HashMap;
 import java.util.Map;
 
 public class SimpleNetworkMediator implements NetworkMediator {
+
+    public SimpleNetworkMediator() {
+    }
 
     private Map<String, INetworkNode> nodes = new HashMap<>();
 

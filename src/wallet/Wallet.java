@@ -1,4 +1,8 @@
+package wallet;
 import java.util.UUID;
+import model.Blockchain;
+import model.Transaction;
+import model.User;
 
 public class Wallet extends WalletBase implements IWallet {
 

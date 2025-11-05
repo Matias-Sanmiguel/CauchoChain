@@ -1,7 +1,8 @@
+package network;
 public class NetworkMessage {
-    enum Type { TRANSACTION, BLOCK, CHAIN_REQUEST, CHAIN_RESPONSE, PING }
+    public enum Type { TRANSACTION, BLOCK, CHAIN_REQUEST, CHAIN_RESPONSE, PING }
 
-    private Type type;
+    public Type type;
     private Object payload;
     private long timestamp;
 
