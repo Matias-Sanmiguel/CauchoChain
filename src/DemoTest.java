@@ -1,9 +1,3 @@
-import miner.Miner;
-import model.Blockchain;
-import model.Transaction;
-import wallet.Wallet;
-
-
 public class DemoTest {
     public static void main(String[] args) {
         try {
@@ -50,3 +44,4 @@ public class DemoTest {
         }
     }
 }
+
