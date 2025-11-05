@@ -1,4 +1,7 @@
 import java.io.IOException;
+import model.*;
+import wallet.*;
+import miner.*;
 
 public class BlockchainTUIDemo {
     public static void main(String[] args) {
@@ -24,7 +27,7 @@ public class BlockchainTUIDemo {
             bc.pendingTransactions.add(genesisReward);
             bc.txPool.addTransaction(genesisReward);
 
-            tui.addLog("Presiona [M] para minar el bloque génesis y começar");
+            tui.addLog("Presiona [Minar] para minar el bloque génesis");
 
             // Iniciar TUI (bloqueante)
             tui.start();

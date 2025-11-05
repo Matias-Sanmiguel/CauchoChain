@@ -1,41 +1,35 @@
 import com.googlecode.lanterna.*;
-import com.googlecode.lanterna.graphics.TextGraphics;
-import com.googlecode.lanterna.input.KeyStroke;
-import com.googlecode.lanterna.input.KeyType;
 import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import com.googlecode.lanterna.screen.Screen;
-import com.googlecode.lanterna.screen.TerminalScreen;
 import com.googlecode.lanterna.gui2.*;
 import com.googlecode.lanterna.gui2.table.Table;
-import com.googlecode.lanterna.TextColor;
 import java.util.concurrent.*;
 
 import java.io.IOException;
 import java.util.*;
 
+import model.*;
+import wallet.*;
+import miner.*;
+
 public class BlockchainTUI {
-    private Blockchain blockchain;
-    private Map<String, Wallet> wallets;
+    private final Blockchain blockchain;
+    private final Map<String, Wallet> wallets;
     private Screen screen;
     // GUI & components
     private MultiWindowTextGUI gui;
-    private Window mainWindow;
+    private BasicWindow mainWindow;
     private TextBox blockList;
     private Table<String> walletsTable;
     private Table<String> pendingTable;
     private TextBox logsBox;
-    private Label statusLabel;
     private Label sparkLabel;
     // Historial pequeño para graficar tamaño del mempool en ascii
-    private Deque<Integer> mempoolHistory = new ArrayDeque<>();
-    private int mempoolHistoryMax = 60;
-    private ScheduledExecutorService updater = Executors.newSingleThreadScheduledExecutor();
+    private final Deque<Integer> mempoolHistory = new ArrayDeque<>();
+    private final int mempoolHistoryMax = 60;
+    private final ScheduledExecutorService updater = Executors.newSingleThreadScheduledExecutor();
     private volatile boolean running = true;
-    private Queue<String> logs;
-    private int maxLogs = 100;
-    private volatile String currentInput = "";
-    private volatile int menuMode = 0;
-    private volatile String inputPrompt = "";
+    private final Queue<String> logs;
 
     public BlockchainTUI(Blockchain blockchain) {
         this.blockchain = blockchain;
@@ -52,7 +46,7 @@ public class BlockchainTUI {
 
         synchronized (logs) {
             logs.add(logEntry);
-            if (logs.size() > maxLogs) {
+            if (logs.size() > 100) {
                 logs.poll();
             }
         }
@@ -73,44 +67,45 @@ public class BlockchainTUI {
 
         // Construir ventana principal con GridLayout (2 columnas)
         mainWindow = new BasicWindow("CauchoChain TUI");
-        Panel root = new Panel(new GridLayout(2));
+        Panel root = new Panel();
+        root.setLayoutManager(new GridLayout(2));
 
         // LEFT: Blockchain panel (ListBox + sparkline)
-        Panel left = new Panel(new GridLayout(1));
+        Panel left = new Panel();
+        left.setLayoutManager(new GridLayout(1));
         left.addComponent(new Label("BLOCKCHAIN").setForegroundColor(TextColor.ANSI.CYAN));
-        blockList = new TextBox(new TerminalSize(40, 10)).setReadOnly(true).setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.FILL, GridLayout.Alignment.FILL, true, true));
+        blockList = new TextBox().setReadOnly(true);
+        blockList.setPreferredSize(new TerminalSize(40, 10));
         left.addComponent(blockList);
         sparkLabel = new Label("");
         left.addComponent(sparkLabel);
 
         // RIGHT TOP: Wallets
-        Panel rightTop = new Panel(new GridLayout(1));
+        Panel rightTop = new Panel();
+        rightTop.setLayoutManager(new GridLayout(1));
         rightTop.addComponent(new Label("WALLETS").setForegroundColor(TextColor.ANSI.MAGENTA));
         walletsTable = new Table<>("Alias", "Address", "Balance");
-        walletsTable.setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.FILL, GridLayout.Alignment.FILL, true, true));
         rightTop.addComponent(walletsTable.withBorder(Borders.singleLine()));
 
         // RIGHT MIDDLE: Pending txs
         rightTop.addComponent(new Label("TX PENDIENTES").setForegroundColor(TextColor.ANSI.YELLOW));
         pendingTable = new Table<>("From", "To", "Amount");
-        pendingTable.setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.FILL, GridLayout.Alignment.FILL, true, true));
         rightTop.addComponent(pendingTable.withBorder(Borders.singleLine()));
 
         // RIGHT BOTTOM: Controls + logs
-        Panel controls = new Panel(new GridLayout(2));
-        controls.addComponent(new Label("CONTROLES").setForegroundColor(TextColor.ANSI.GREEN), GridLayout.createLayoutData(GridLayout.Alignment.BEGINNING, GridLayout.Alignment.BEGINNING, false, false));
+        Panel controls = new Panel();
+        controls.setLayoutManager(new GridLayout(2));
+        controls.addComponent(new Label("CONTROLES").setForegroundColor(TextColor.ANSI.GREEN));
+        controls.addComponent(new Label("")); // spacer
+
         Button txButton = new Button("Crear TX", this::openTxDialog);
         Button mineButton = new Button("Minar", this::openMineDialog);
-        Button statsButton = new Button("Estadísticas", () -> showStats());
-        Button helpButton = new Button("Help", () -> showHelp());
+        Button statsButton = new Button("Estadísticas", this::showStats);
+        Button helpButton = new Button("Help", this::showHelp);
         Button quitButton = new Button("Salir", () -> {
             addLog("Saliendo...");
             running = false;
-            try {
-                if (gui != null && gui.getActiveWindow() != null) {
-                    gui.getActiveWindow().close();
-                }
-            } catch (Exception ignore) {}
+            mainWindow.close();
         });
         controls.addComponent(txButton);
         controls.addComponent(mineButton);
@@ -118,11 +113,12 @@ public class BlockchainTUI {
         controls.addComponent(helpButton);
         controls.addComponent(quitButton);
 
-        logsBox = new TextBox(new TerminalSize(40, 8)).setReadOnly(true).setLayoutData(GridLayout.createLayoutData(GridLayout.Alignment.FILL, GridLayout.Alignment.FILL, true, false));
+        logsBox = new TextBox().setReadOnly(true);
+        logsBox.setPreferredSize(new TerminalSize(40, 8));
 
         // Layout: left full height, right contains wallet/pending/controls+logs
-        root.addComponent(left.withBorder(Borders.singleLine()), GridLayout.createLayoutData(GridLayout.Alignment.FILL, GridLayout.Alignment.FILL, true, true, 1, 3));
-        root.addComponent(rightTop.withBorder(Borders.doubleLine()), GridLayout.createLayoutData(GridLayout.Alignment.FILL, GridLayout.Alignment.FILL, true, true));
+        root.addComponent(left.withBorder(Borders.singleLine()));
+        root.addComponent(rightTop.withBorder(Borders.doubleLine()));
         root.addComponent(controls.withBorder(Borders.singleLine()));
         root.addComponent(logsBox);
 
@@ -131,10 +127,8 @@ public class BlockchainTUI {
         addLog("TUI iniciada");
         addLog("Controles: Crear TX | Minar | Estadísticas | Help | Salir");
 
-        // Schedule periodic updates en el hilo de GUI para evitar parpadeo
-        updater.scheduleAtFixedRate(() -> {
-            gui.getGUIThread().invokeLater(() -> updateAllComponents());
-        }, 0, 500, TimeUnit.MILLISECONDS);
+        // Schedule periodic updates
+        updater.scheduleAtFixedRate(this::updateAllComponents, 0, 500, TimeUnit.MILLISECONDS);
 
         // Mostrar ventana (bloquea hasta que se cierre la ventana)
         gui.addWindowAndWait(mainWindow);
@@ -149,15 +143,17 @@ public class BlockchainTUI {
 
     private void openTxDialog() {
         BasicWindow dialog = new BasicWindow("Crear Transacción");
-        Panel p = new Panel(new GridLayout(1));
+        Panel p = new Panel();
+        p.setLayoutManager(new GridLayout(1));
         p.addComponent(new Label("Formato: FROM TO AMOUNT"));
-        TextBox box = new TextBox().setValidationPattern(null);
+        TextBox box = new TextBox();
         p.addComponent(box);
-        Panel buttons = new Panel(new GridLayout(2));
+        Panel buttons = new Panel();
+        buttons.setLayoutManager(new GridLayout(2));
         Button ok = new Button("OK", () -> {
             String text = box.getText();
             dialog.close();
-            gui.getGUIThread().invokeLater(() -> processTxInput(text));
+            processTxInput(text);
         });
         Button cancel = new Button("Cancel", dialog::close);
         buttons.addComponent(ok);
@@ -169,11 +165,14 @@ public class BlockchainTUI {
 
     private void openMineDialog() {
         BasicWindow dialog = new BasicWindow("Minar");
-        Panel p = new Panel(new GridLayout(1));
+        Panel p = new Panel();
+        p.setLayoutManager(new GridLayout(1));
         p.addComponent(new Label("Nombre del minero:"));
         TextBox box = new TextBox();
+        box.setText("miner1");
         p.addComponent(box);
-        Panel buttons = new Panel(new GridLayout(2));
+        Panel buttons = new Panel();
+        buttons.setLayoutManager(new GridLayout(2));
         Button ok = new Button("OK", () -> {
             String miner = box.getText();
             dialog.close();
@@ -206,7 +205,8 @@ public class BlockchainTUI {
 
                 if (wallets.containsKey(from)) {
                     Wallet wallet = wallets.get(from);
-                    Transaction tx = wallet.createTransaction(to, amount, blockchain);
+                    String toAddress = wallets.containsKey(to) ? wallets.get(to).getAddress() : to;
+                    Transaction tx = wallet.createTransaction(toAddress, amount, blockchain);
                     if (tx != null) {
                         blockchain.createTransaction(tx);
                         addLog("✓ TX: " + from + " -> " + to + " : " + amount);
@@ -228,26 +228,26 @@ public class BlockchainTUI {
 
     private void showStats() {
         addLog("=== ESTADÍSTICAS ===");
-        addLog("Bloques: " + blockchain.chain.size());
+        addLog("Bloques: " + blockchain.getChain().size());
         addLog("Transacciones pendientes: " + blockchain.txPool.getPending().size());
         addLog("Dificultad: " + blockchain.getDifficulty());
         addLog("Recompensa: " + blockchain.getMiningReward());
     }
 
     private void showHelp() {
-        addLog("=== CONTROLES ===");
-        addLog("[T] Crear transacción");
-        addLog("[M] Minar bloque");
-        addLog("[E] Ver estadísticas");
-        addLog("[H] Mostrar ayuda");
-        addLog("[Q] Salir");
+        addLog("=== AYUDA ===");
+        addLog("Crear TX: alias1 alias2 monto");
+        addLog("Minar: nombre del minero");
+        addLog("Stats: ver estadísticas");
+        addLog("Help: mostrar esta ayuda");
+        addLog("Salir: cerrar la aplicación");
     }
 
     // Actualiza los componentes de la GUI con los datos actuales de la blockchain
-    private void updateAllComponents() {
+    private synchronized void updateAllComponents() {
         try {
             // actualizar blocks (TextBox)
-            List<Block> blocks = new ArrayList<>(blockchain.chain);
+            List<Block> blocks = new ArrayList<>(blockchain.getChain());
             List<String> lines = new ArrayList<>();
             for (int i = Math.max(0, blocks.size() - 20); i < blocks.size(); i++) {
                 Block b = blocks.get(i);
@@ -283,10 +283,10 @@ public class BlockchainTUI {
             int pendingSize = pending.size();
             mempoolHistory.addLast(pendingSize);
             if (mempoolHistory.size() > mempoolHistoryMax) mempoolHistoryTrim();
-            sparkLabel.setText(buildSparkline(new ArrayList<>(mempoolHistory), 40));
+            sparkLabel.setText("Mempool: " + buildSparkline(new ArrayList<>(mempoolHistory), 40));
 
         } catch (Exception e) {
-            addLog("Error actualizando UI: " + e.getMessage());
+            // Silently ignore UI update errors
         }
     }
 
@@ -314,22 +314,14 @@ public class BlockchainTUI {
         return str.length() > maxLen ? str.substring(0, maxLen - 1) + "…" : str;
     }
 
-    private String repeatChar(String ch, int count) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < count; i++) {
-            sb.append(ch);
-        }
-        return sb.toString();
-    }
-
     public void stop() throws IOException {
         running = false;
         if (updater != null) {
             updater.shutdownNow();
         }
-        if (gui != null) {
+        if (mainWindow != null) {
             try {
-                gui.getActiveWindow().close();
+                mainWindow.close();
             } catch (Exception ignore) {}
         }
         if (screen != null) {

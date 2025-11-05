@@ -1,3 +1,7 @@
+import model.*;
+import wallet.*;
+import miner.*;
+
 public class DemoTest {
     public static void main(String[] args) {
         try {
@@ -44,4 +48,3 @@ public class DemoTest {
         }
     }
 }
-
