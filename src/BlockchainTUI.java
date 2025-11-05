@@ -145,8 +145,8 @@ public class BlockchainTUI {
 
             Transaction tx = w.createTransaction(toAddr, amount, blockchain);
             if (tx != null) {
-                blockchain.txPool.addTransaction(tx); // ⚠️ solo agregar al pool
-                addLog("TX creada: " + from + " → " + to + " (" + amount + ")");
+                blockchain.addTransactionToPool(tx); // ✅ Solo agrega al pool (sin confirmar)
+                addLog("TX creada: " + from + " → " + to + " (" + amount + ") [PENDIENTE]");
                 addLog("Miná el bloque para confirmarla [M]");
             } else {
                 addLog("TX fallida (saldo insuficiente?)");
@@ -164,6 +164,14 @@ public class BlockchainTUI {
         new Thread(() -> {
             addLog("⛏️  Minando bloque...");
             try {
+                // Mover TX del pool a pendientes antes de minar
+                List<Transaction> txFromPool = new ArrayList<>(blockchain.txPool.getPending());
+                for (Transaction tx : txFromPool) {
+                    if (!blockchain.pendingTransactions.contains(tx)) {
+                        blockchain.pendingTransactions.add(tx);
+                    }
+                }
+
                 Miner minerObj = new Miner(1.0f, m);
                 minerObj.mine(blockchain);
                 addLog("✅ Bloque minado por " + m);

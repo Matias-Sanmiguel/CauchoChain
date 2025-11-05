@@ -25,7 +25,15 @@ public class Blockchain extends BlockchainCore {
         return getLastBlock();
     }
 
-    // Agrega transacción al pool y a pendingTransactions
+    // Agrega transacción SOLO al pool (sin confirmar aún)
+    public void addTransactionToPool(Transaction tx) {
+        if (tx == null || !tx.isValid()) {
+            throw new RuntimeException("Transacción inválida, no se puede añadir.");
+        }
+        this.txPool.addTransaction(tx);
+    }
+
+    // Agrega transacción al pool y a pendingTransactions (para uso interno/minería)
     public void createTransaction(Transaction tx) {
         if (tx == null || !tx.isValid()) {
             throw new RuntimeException("Transacción inválida, no se puede añadir.");
@@ -46,6 +54,7 @@ public class Blockchain extends BlockchainCore {
         String prevHash = (latest == null) ? "0" : latest.getHash();
 
         Block newBlock = new Block(getChain().size(), transactionsToMine, prevHash, miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
+
         // Proof of Work
         String target = new String(new char[difficulty]).replace('\0', '0');
         while (!newBlock.getHash().substring(0, difficulty).equals(target)) {
@@ -58,7 +67,9 @@ public class Blockchain extends BlockchainCore {
             throw new RuntimeException("El bloque contiene transacciones inválidas.");
         }
 
+        // Agregar bloque minado a la cadena
         getChain().add(newBlock);
+
         // Limpiar pool: quitar transacciones minadas
         this.txPool.removeTransactions(transactionsToMine);
         this.pendingTransactions.removeAll(transactionsToMine);
