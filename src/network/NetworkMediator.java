@@ -1,3 +1,5 @@
+package network;
+
 public interface NetworkMediator {
     void registerNode(INetworkNode node);
     void unregisterNode(INetworkNode node);

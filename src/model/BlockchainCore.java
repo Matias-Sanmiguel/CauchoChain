@@ -1,13 +1,15 @@
+package model;
 import java.util.ArrayList;
 import java.util.List;
+import network.INetworkNode;
 
 public abstract class BlockchainCore {
 
     // ATRIBUTOS BÁSICOS
-    protected List<Block> chain;
-    protected int difficulty;
-    protected float reward;
-    protected List<INetworkNode> nodes;
+    private List<Block> chain;
+    private int difficulty;
+    private float reward;
+    private List<INetworkNode> nodes;
 
     // CONSTRUCTOR
 
@@ -117,5 +119,9 @@ public abstract class BlockchainCore {
     // da la lista de los nodos conectados
     public List<INetworkNode> getNodes() {
         return nodes;
+    }
+
+    public List<Block> getChain() {
+        return chain;
     }
 }

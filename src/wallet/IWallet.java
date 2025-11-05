@@ -1,3 +1,6 @@
+package wallet;
+import model.Blockchain;
+import model.Transaction;
 
 public interface IWallet {
 

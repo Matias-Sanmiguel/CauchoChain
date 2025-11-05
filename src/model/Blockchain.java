@@ -1,5 +1,8 @@
+package model;
+
 import java.util.ArrayList;
 import java.util.List;
+import miner.Miner;
 
 public class Blockchain extends BlockchainCore {
     public List<Transaction> pendingTransactions;
@@ -42,7 +45,7 @@ public class Blockchain extends BlockchainCore {
         Block latest = getLatestBlock();
         String prevHash = (latest == null) ? "0" : latest.getHash();
 
-        Block newBlock = new Block(chain.size(), transactionsToMine, prevHash, miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
+        Block newBlock = new Block(getChain().size(), transactionsToMine, prevHash, miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
         // Proof of Work
         String target = new String(new char[difficulty]).replace('\0', '0');
         while (!newBlock.getHash().substring(0, difficulty).equals(target)) {
@@ -55,7 +58,7 @@ public class Blockchain extends BlockchainCore {
             throw new RuntimeException("El bloque contiene transacciones inválidas.");
         }
 
-        chain.add(newBlock);
+        getChain().add(newBlock);
         // Limpiar pool: quitar transacciones minadas
         this.txPool.removeTransactions(transactionsToMine);
         this.pendingTransactions.removeAll(transactionsToMine);
@@ -71,7 +74,7 @@ public class Blockchain extends BlockchainCore {
     public float getBalance(String address) {
         float balance = 0.0f;
         // Revisar todos los bloques
-        for (Block block : chain) {
+        for (Block block : getChain()) {
             for (Transaction tx : block.getTransactions()) {
                 if (address.equals(tx.fromAddress)) {
                     balance -= tx.amount;
@@ -98,9 +101,9 @@ public class Blockchain extends BlockchainCore {
     }
 
     public boolean isChainValid() {
-        for (int i = 1; i < chain.size(); i++) {
-            Block current = chain.get(i);
-            Block previous = chain.get(i - 1);
+        for (int i = 1; i < getChain().size(); i++) {
+            Block current = getChain().get(i);
+            Block previous = getChain().get(i - 1);
 
             if (!current.getHash().equals(current.calculateHash())) return false;
             if (!current.getPrevHash().equals(previous.getHash())) return false;

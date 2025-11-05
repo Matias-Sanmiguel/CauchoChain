@@ -1,5 +1,9 @@
+package model;
 import java.util.Map;
 import java.util.UUID;
+
+import wallet.WalletBase;
+
 import java.util.HashMap;
 
 

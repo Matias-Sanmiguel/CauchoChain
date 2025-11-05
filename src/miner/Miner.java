@@ -1,5 +1,13 @@
+package miner;
+
 import java.util.ArrayList;
 import java.util.List;
+import model.Block;
+import model.Blockchain;
+import model.Transaction;
+import model.User;
+import wallet.Wallet;
+
 public class Miner implements IMiner {
     private float hashMined;
     private float hashRate;
@@ -38,7 +46,7 @@ public class Miner implements IMiner {
         String prevHash = (latest == null) ? "0" : latest.getHash();
 
         // crear bloque con la dirección del minero
-        Block newBlock = new Block(bc.chain.size(), transactionsToMine, prevHash, this.getAddress());
+        Block newBlock = new Block(bc.getChain().size(), transactionsToMine, prevHash, this.getAddress());
 
         int difficulty = bc.getDifficulty(); // saca la diff desde blockchain
 
@@ -60,7 +68,7 @@ public class Miner implements IMiner {
             throw new RuntimeException("El bloque minado no es válido.");
         }
 
-        bc.chain.add(newBlock); //añade el bloque a la cadena de bloques
+        bc.getChain().add(newBlock); //añade el bloque a la cadena de bloques
 
         bc.txPool.removeTransactions(transactionsToMine); //elimina las transacciones minadas del pool de transacciones
         bc.pendingTransactions.removeAll(transactionsToMine); //elimina las transacciones minadas de las transacciones pendientes
@@ -81,6 +89,8 @@ public class Miner implements IMiner {
         System.out.println("  Tiempo: " + timeTaken + "ms");
         System.out.println("  Recompensa: " + miningReward + " | Total minado: " + hashMined);
     }
+
+    @Override
     public boolean validateBlock (Block block){
         if (!block.getHash().equals(block.calculateHash())) { //verifica que el hash del bloque sea correcto
             //el hash del bloque deberia ser igual al hash si lo recalculo desde cero
