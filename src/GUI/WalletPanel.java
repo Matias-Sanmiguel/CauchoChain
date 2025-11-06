@@ -1,5 +1,7 @@
 package GUI;
 
+import miner.Miner;
+import model.Block;
 import model.Blockchain;
 import model.Transaction;
 import wallet.Wallet;
@@ -85,14 +87,23 @@ public class WalletPanel extends JPanel {
 
         // Crear algunas wallets de ejemplo y actualizar la UI inicialmente
         SwingUtilities.invokeLater(() -> {
-            createNewWallet(); // Primera wallet
-            // Crear transacción inicial para la primera wallet
-            if (!wallets.isEmpty()) {
-                Transaction initialTx = new Transaction(null, wallets.get(0).getAddress(), 50.0f);
-                blockchain.createTransaction(initialTx);
-                blockchain.minePendingTransactions(new miner.Miner(2.0f, "InitialMiner"));
-            }
-            createNewWallet(); // Segunda wallet
+            // Crear primera wallet con fondos iniciales
+            Wallet firstWallet = new Wallet("Wallet-1");
+            wallets.add(firstWallet);
+
+            // Crear transacción inicial y minarla
+            Transaction initialTx = new Transaction(null, firstWallet.getAddress(), 50.0f);
+            blockchain.createTransaction(initialTx);
+
+            // Minar el bloque inicial
+            Miner initialMiner = new Miner(2.0f, "InitialMiner");
+            blockchain.minePendingTransactions(initialMiner);
+
+            // Crear segunda wallet
+            Wallet secondWallet = new Wallet("Wallet-2");
+            wallets.add(secondWallet);
+
+            // Actualizar la UI
             updateWalletsList();
             updateTransactionsList();
         });
@@ -131,8 +142,19 @@ public class WalletPanel extends JPanel {
 
     private void sendTransaction() {
         try {
-            Wallet fromWallet = wallets.get(fromWalletCombo.getSelectedIndex());
-            Wallet toWallet = wallets.get(toWalletCombo.getSelectedIndex());
+            // Obtener los índices seleccionados
+            int fromIndex = fromWalletCombo.getSelectedIndex();
+            int toIndex = toWalletCombo.getSelectedIndex();
+
+            if (fromIndex < 0 || toIndex < 0 || fromIndex >= wallets.size() || toIndex >= wallets.size()) {
+                JOptionPane.showMessageDialog(this,
+                    "Por favor selecciona carteras válidas",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            Wallet fromWallet = wallets.get(fromIndex);
+            Wallet toWallet = wallets.get(toIndex);
             float amount = Float.parseFloat(amountField.getText());
 
             if (fromWallet == toWallet) {
@@ -142,15 +164,33 @@ public class WalletPanel extends JPanel {
                 return;
             }
 
-            fromWallet.createTransaction(toWallet.getAddress(), amount, blockchain);
+            if (amount <= 0) {
+                JOptionPane.showMessageDialog(this,
+                    "El monto debe ser mayor a 0",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Crear y añadir la transacción
+            Transaction tx = fromWallet.createTransaction(toWallet.getAddress(), amount, blockchain);
+            blockchain.createTransaction(tx); // Aseguramos que se añada al pool de transacciones
+
             JOptionPane.showMessageDialog(this,
                 "Transacción enviada correctamente",
                 "Éxito", JOptionPane.INFORMATION_MESSAGE);
 
             amountField.setText("");
-            updateWalletsList();
-            updateTransactionsList();
 
+            // Actualizar inmediatamente la UI
+            SwingUtilities.invokeLater(() -> {
+                updateWalletsList();
+                updateTransactionsList();
+            });
+
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this,
+                "Por favor ingresa un monto válido",
+                "Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
                 "Error al enviar: " + e.getMessage(),
@@ -161,23 +201,34 @@ public class WalletPanel extends JPanel {
     private void updateTransactionsList() {
         transactionsTableModel.setRowCount(0);
 
+        // Transacciones confirmadas (primero las mostramos porque son más importantes)
+        for (Block block : blockchain.getChain()) {
+            for (Transaction tx : block.getTransactions()) {
+                addTransactionToTable(tx, "Confirmada");
+            }
+        }
+
         // Transacciones pendientes
         for (Transaction tx : blockchain.pendingTransactions) {
             addTransactionToTable(tx, "Pendiente");
-        }
-
-        // Transacciones confirmadas
-        for (Transaction tx : blockchain.txPool.getValidTransactions()) {
-            addTransactionToTable(tx, "Confirmada");
         }
     }
 
     private void addTransactionToTable(Transaction tx, String status) {
         Vector<Object> row = new Vector<>();
-        row.add(getAliasForAddress(tx.fromAddress));
-        row.add(getAliasForAddress(tx.toAddress));
-        row.add(tx.amount);
-        row.add(status);
+        // Para transacciones de recompensa (minería)
+        if (tx.fromAddress == null) {
+            row.add("SISTEMA");
+            row.add(tx.toAddress); // Dirección del minero
+            row.add(tx.amount);
+            row.add("Recompensa de minería");
+        } else {
+            // Para transacciones normales
+            row.add(tx.fromAddress);
+            row.add(tx.toAddress);
+            row.add(tx.amount);
+            row.add(status);
+        }
         transactionsTableModel.addRow(row);
     }
 
