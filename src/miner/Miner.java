@@ -73,12 +73,12 @@ public class Miner implements IMiner {
         bc.pendingTransactions.removeAll(transactionsToMine);
 
         float miningReward = bc.getMiningReward();
-
         Transaction rewardTx = new Transaction(null, wallet.getAddress(), miningReward);
         bc.pendingTransactions.add(rewardTx);
         bc.txPool.addTransaction(rewardTx);
 
         this.hashMined += miningReward;
+        this.wallet.getBalance(bc);
 
         logger.success("Bloque #" + newBlock.getIndex() + " minado por " + wallet.getAlias() + " en " + timeTaken + "ms | Nonce: " + newBlock.getNonce() + " | Recompensa: " + miningReward);
     }

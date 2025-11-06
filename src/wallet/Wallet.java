@@ -33,10 +33,7 @@ public class Wallet extends WalletBase implements IWallet {
 		return alias;
 	}
 
-	@Override
-	public String getAddress() {
-		return alias;
-	}
+	// Usar getAddress() de WalletBase para obtener la dirección real basada en la clave pública
 
 	public void setAlias(String alias) {
 		this.alias = alias;

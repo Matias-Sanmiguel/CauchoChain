@@ -92,7 +92,7 @@ public class WalletPanel extends JPanel {
         // Crear algunas wallets de ejemplo y actualizar la UI inicialmente
         SwingUtilities.invokeLater(() -> {
             // Crear primera wallet con fondos iniciales
-            Wallet firstWallet = new Wallet("Wallet-1");
+            Wallet firstWallet = new Wallet("Principal");
             wallets.add(firstWallet);
 
             // Crear transacción inicial y minarla
@@ -104,7 +104,7 @@ public class WalletPanel extends JPanel {
             blockchain.minePendingTransactions(initialMiner);
 
             // Crear segunda wallet
-            Wallet secondWallet = new Wallet("Wallet-2");
+            Wallet secondWallet = new Wallet("Secundaria");
             wallets.add(secondWallet);
 
             // Actualizar la UI
@@ -121,11 +121,43 @@ public class WalletPanel extends JPanel {
     }
 
     private void createNewWallet() {
-        String alias = "Wallet-" + (wallets.size() + 1);
-        Wallet wallet = new Wallet(alias);
+        // Mostrar diálogo para ingresar el alias
+        String alias = JOptionPane.showInputDialog(
+            this,
+            "Ingrese un alias para la nueva wallet:",
+            "Crear Nueva Wallet",
+            JOptionPane.PLAIN_MESSAGE
+        );
+
+        // Verificar si el usuario canceló o ingresó un alias vacío
+        if (alias == null || alias.trim().isEmpty()) {
+            return;
+        }
+
+        // Verificar si el alias ya existe
+        for (Wallet w : wallets) {
+            if (w.getAlias().equals(alias.trim())) {
+                JOptionPane.showMessageDialog(
+                    this,
+                    "El alias ya está en uso. Por favor elija otro.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+        }
+
+        Wallet wallet = new Wallet(alias.trim());
         wallets.add(wallet);
         updateWalletsList();
         updateTransactionsList();
+
+        JOptionPane.showMessageDialog(
+            this,
+            "Wallet creada exitosamente con alias: " + alias,
+            "Wallet Creada",
+            JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private void updateWalletsList() {
@@ -134,14 +166,15 @@ public class WalletPanel extends JPanel {
         toWalletModel.removeAllElements();
 
         for (Wallet wallet : wallets) {
+            String address = wallet.getAddress();
             Vector<Object> row = new Vector<>();
-            row.add(wallet.getAddress());
+            row.add(address);  // Dirección completa de la wallet
             row.add(wallet.getAlias());
             row.add(String.format("%.2f", wallet.getBalance(blockchain)));
             walletsTableModel.addRow(row);
 
-            fromWalletModel.addElement(wallet.getAddress());
-            toWalletModel.addElement(wallet.getAddress());
+            fromWalletModel.addElement(wallet.getAlias());
+            toWalletModel.addElement(wallet.getAlias());
         }
     }
 
@@ -158,8 +191,26 @@ public class WalletPanel extends JPanel {
                 return;
             }
 
-            Wallet fromWallet = wallets.get(fromIndex);
-            Wallet toWallet = wallets.get(toIndex);
+            // Obtener las wallets por sus alias
+            String fromAlias = fromWalletCombo.getSelectedItem().toString();
+            String toAlias = toWalletCombo.getSelectedItem().toString();
+
+            Wallet fromWallet = null;
+            Wallet toWallet = null;
+
+            // Encontrar las wallets correspondientes
+            for (Wallet w : wallets) {
+                if (w.getAlias().equals(fromAlias)) fromWallet = w;
+                if (w.getAlias().equals(toAlias)) toWallet = w;
+            }
+
+            if (fromWallet == null || toWallet == null) {
+                JOptionPane.showMessageDialog(this,
+                    "Error al encontrar las wallets seleccionadas",
+                    "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
             float amount = Float.parseFloat(amountField.getText());
 
             if (fromWallet == toWallet) {
@@ -219,18 +270,28 @@ public class WalletPanel extends JPanel {
         }
     }
 
+    private String getAliasForAddress(String address) {
+        if (address == null) return "SISTEMA";
+        for (Wallet w : wallets) {
+            if (w.getAddress().equals(address)) {
+                return w.getAlias();
+            }
+        }
+        return address.substring(0, 8) + "...";
+    }
+
     private void addTransactionToTable(Transaction tx, String status) {
         Vector<Object> row = new Vector<>();
         // Para transacciones de recompensa (minería)
         if (tx.fromAddress == null) {
             row.add("SISTEMA");
-            row.add(tx.toAddress);
+            row.add(getAliasForAddress(tx.toAddress));
             row.add(String.format("%.2f", tx.amount));
             row.add("Recompensa de minería");
         } else {
             // Para transacciones normales
-            row.add(tx.fromAddress);
-            row.add(tx.toAddress);
+            row.add(getAliasForAddress(tx.fromAddress));
+            row.add(getAliasForAddress(tx.toAddress));
             row.add(String.format("%.2f", tx.amount));
             row.add(status);
         }

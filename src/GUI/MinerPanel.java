@@ -93,27 +93,34 @@ public class MinerPanel extends JPanel {
             lastBlockCount = blockchain.getChain().size();
 
             // Ejecutar mineria en un thread separado
-            new Thread(() -> {
+            Thread miningThread = new Thread(() -> {
                 while (isMining) {
                     try {
                         synchronized (blockchain) {
                             if (!blockchain.pendingTransactions.isEmpty()) {
                                 try {
                                     miner.mine(blockchain);
-                                    log("Bloque minado exitosamente");
+                                    SwingUtilities.invokeLater(() -> {
+                                        log("Bloque minado exitosamente");
+                                        updateStats();
+                                    });
                                 } catch (Exception ex) {
-                                    log("Error minando: " + ex.getMessage());
+                                    final String error = ex.getMessage();
+                                    SwingUtilities.invokeLater(() -> log("Error minando: " + error));
                                 }
                             } else {
-                                log("Esperando transacciones...");
+                                SwingUtilities.invokeLater(() -> log("Esperando transacciones..."));
                             }
                         }
                         Thread.sleep(1000);
                     } catch (InterruptedException ex) {
+                        Thread.currentThread().interrupt();
                         break;
                     }
                 }
-            }).setDaemon(true);
+            });
+            miningThread.setDaemon(true);
+            miningThread.start();
         }
     }
 
@@ -129,9 +136,15 @@ public class MinerPanel extends JPanel {
         try {
             if (miner != null) {
                 float hashRate = miner.getHashRate();
-                float totalReward = miner.getTotalMined();
+                float totalReward = miner.getBalance(blockchain);
                 hashRateLabel.setText(String.format("Tasa de Hash: %.1f H/s", hashRate));
                 rewardLabel.setText(String.format("Recompensa Total: %.2f", totalReward));
+
+                // Actualizar la barra de progreso si está minando
+                if (isMining && !blockchain.pendingTransactions.isEmpty()) {
+                    miningProgress.setString(String.format("Minando... (%d tx pendientes)",
+                        blockchain.pendingTransactions.size()));
+                }
             }
         } catch (Exception ex) {
             log("Error actualizando stats: " + ex.getMessage());
