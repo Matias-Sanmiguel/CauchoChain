@@ -168,7 +168,7 @@ public class BlockchainTUI {
         final String m = miner;
 
         new Thread(() -> {
-            logger.info("⛏️ Minador iniciando...");
+            logger.info("Minador iniciando...");
             try {
                 List<Transaction> txFromPool = new ArrayList<>(blockchain.txPool.getPending());
                 for (Transaction tx : txFromPool) {
@@ -194,7 +194,7 @@ public class BlockchainTUI {
 
         // Header
         drawBox(0, 0, width, 3, TextColor.ANSI.CYAN);
-        drawCenter(1, "⚡ CAUCHOCHAIN TUI - Blockchain Demo ⚡", TextColor.ANSI.CYAN);
+        drawCenter(1, "CAUCHOCHAIN TUI - Blockchain Demo", TextColor.ANSI.CYAN);
 
         int y = 4;
         int col1Width = width / 2 - 2;
@@ -203,33 +203,33 @@ public class BlockchainTUI {
         int rightCol = leftCol + col1Width + 2;
 
         // Left Panel: Blockchain + Wallets
-        drawPanel(leftCol, y, col1Width, 12, "📦 Blockchain", TextColor.ANSI.BLUE);
+        drawPanel(leftCol, y, col1Width, 12, "Blockchain", TextColor.ANSI.BLUE);
         drawBlockchainContent(leftCol + 1, y + 2, col1Width - 2);
 
-        drawPanel(leftCol, y + 14, col1Width, 12, "💳 Wallets", TextColor.ANSI.MAGENTA);
+        drawPanel(leftCol, y + 14, col1Width, 12, "Wallets", TextColor.ANSI.MAGENTA);
         drawWalletsContent(leftCol + 1, y + 16, col1Width - 2);
 
         // Right Panel: Transactions + Status
-        drawPanel(rightCol, y, col2Width, 12, "📋 Transacciones Pendientes", TextColor.ANSI.YELLOW);
+        drawPanel(rightCol, y, col2Width, 12, "Transacciones Pendientes", TextColor.ANSI.YELLOW);
         drawTransactionsContent(rightCol + 1, y + 2, col2Width - 2);
 
-        drawPanel(rightCol, y + 14, col2Width, 12, "📊 Estado", TextColor.ANSI.GREEN);
+        drawPanel(rightCol, y + 14, col2Width, 12, "Estado", TextColor.ANSI.GREEN);
         drawStatusContent(rightCol + 1, y + 16, col2Width - 2);
 
         // Bottom: Input or Controls & Logs
         int bottomY = height - 12;
         if (!inputMode.isEmpty()) {
-            drawPanel(1, bottomY, width - 2, 5, "⌨️  Entrada", TextColor.ANSI.WHITE);
-            drawLine(bottomY + 2, 2, "➜ " + inputPrompt, TextColor.ANSI.YELLOW);
+            drawPanel(1, bottomY, width - 2, 5, "Entrada", TextColor.ANSI.WHITE);
+            drawLine(bottomY + 2, 2, "-> " + inputPrompt, TextColor.ANSI.YELLOW);
             drawLine(bottomY + 3, 4, "> " + inputBuffer + "_", TextColor.ANSI.WHITE);
             drawLine(bottomY + 4, 2, "(ESC=Cancelar, ENTER=Confirmar)", TextColor.ANSI.CYAN);
         } else {
-            drawPanel(1, bottomY, width - 2, 5, "⌨️  Controles", TextColor.ANSI.GREEN);
-            drawCenter(bottomY + 2, "[T]=Transacción  [M]=Minar  [W]=Wallet  [S]=Stats  [H]=Ayuda  [Q]=Salir", TextColor.ANSI.GREEN);
+            drawPanel(1, bottomY, width - 2, 5, "Controles", TextColor.ANSI.GREEN);
+            drawCenter(bottomY + 2, "[T]=Transaccion  [M]=Minar  [W]=Wallet  [S]=Stats  [H]=Ayuda  [Q]=Salir", TextColor.ANSI.GREEN);
         }
 
         // Logs Panel
-        drawPanel(1, bottomY + 6, width - 2, height - bottomY - 7, "📝 Logs", TextColor.ANSI.CYAN);
+        drawPanel(1, bottomY + 6, width - 2, height - bottomY - 7, "Logs", TextColor.ANSI.CYAN);
         drawLogsContent(3, bottomY + 8, width - 4);
 
         screen.refresh();

@@ -7,6 +7,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
+import java.util.LinkedList;
 
 public class Logger {
     private static Logger instance;
@@ -16,11 +18,14 @@ public class Logger {
     private final Object lock = new Object();
     private final String redisKey = "blockchain:logs";
     private final int maxLogsInMemory = 100;
+    private final Queue<String> localLogs = new LinkedList<>();
+    private boolean redisAvailable = false;
 
     private Logger() {
         this.logFile = "logs/blockchain_" + System.currentTimeMillis() + ".log";
         this.formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
         this.jedisPool = initializeRedis();
+        this.redisAvailable = (jedisPool != null);
     }
 
     public static Logger getInstance() {
@@ -48,14 +53,13 @@ public class Logger {
             try (Jedis jedis = pool.getResource()) {
                 jedis.ping();
                 System.out.println("[Logger] Redis conectado exitosamente en localhost:6379");
+                return pool;
             } catch (Exception e) {
-                System.err.println("[Logger] Error conectando a Redis: " + e.getMessage());
-                System.err.println("[Logger] Continuando sin Redis...");
+                System.err.println("[Logger] No hay conexion a Redis. Usando buffer local.");
                 return null;
             }
-            return pool;
         } catch (Exception e) {
-            System.err.println("[Logger] Error inicializando Redis: " + e.getMessage());
+            System.err.println("[Logger] No hay conexion a Redis. Usando buffer local.");
             return null;
         }
     }
@@ -65,8 +69,16 @@ public class Logger {
             String timestamp = LocalDateTime.now().format(formatter);
             String logEntry = "[" + timestamp + "] " + message;
 
+            addToLocalLogs(logEntry);
             writeToRedis(logEntry);
             System.out.println(logEntry);
+        }
+    }
+
+    private void addToLocalLogs(String entry) {
+        localLogs.add(entry);
+        if (localLogs.size() > maxLogsInMemory) {
+            localLogs.poll();
         }
     }
 
@@ -91,7 +103,7 @@ public class Logger {
     }
 
     private void writeToRedis(String entry) {
-        if (jedisPool == null) {
+        if (jedisPool == null || !redisAvailable) {
             return;
         }
 
@@ -103,47 +115,50 @@ public class Logger {
                 jedis.ltrim(redisKey, logCount - maxLogsInMemory, -1);
             }
         } catch (Exception e) {
-            System.err.println("[Logger] Error escribiendo a Redis: " + e.getMessage());
+            redisAvailable = false;
         }
     }
 
     public synchronized List<String> getLogs() {
-        if (jedisPool == null) {
-            return new ArrayList<>();
+        if (redisAvailable && jedisPool != null) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                return jedis.lrange(redisKey, 0, -1);
+            } catch (Exception e) {
+                redisAvailable = false;
+            }
         }
-
-        try (Jedis jedis = jedisPool.getResource()) {
-            return jedis.lrange(redisKey, 0, -1);
-        } catch (Exception e) {
-            System.err.println("[Logger] Error leyendo de Redis: " + e.getMessage());
-            return new ArrayList<>();
-        }
+        return new ArrayList<>(localLogs);
     }
 
     public synchronized List<String> getLastLogs(int count) {
-        if (jedisPool == null) {
-            return new ArrayList<>();
+        if (redisAvailable && jedisPool != null) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                long totalLogs = jedis.llen(redisKey);
+                long start = Math.max(0, totalLogs - count);
+                return jedis.lrange(redisKey, start, -1);
+            } catch (Exception e) {
+                redisAvailable = false;
+            }
         }
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            long totalLogs = jedis.llen(redisKey);
-            long start = Math.max(0, totalLogs - count);
-            return jedis.lrange(redisKey, start, -1);
-        } catch (Exception e) {
-            System.err.println("[Logger] Error leyendo últimos logs de Redis: " + e.getMessage());
-            return new ArrayList<>();
+        List<String> result = new ArrayList<>(localLogs);
+        if (result.size() > count) {
+            return new ArrayList<>(result.subList(result.size() - count, result.size()));
         }
+        return result;
     }
 
     public synchronized void clear() {
-        if (jedisPool == null) {
-            return;
+        synchronized (lock) {
+            localLogs.clear();
         }
 
-        try (Jedis jedis = jedisPool.getResource()) {
-            jedis.del(redisKey);
-        } catch (Exception e) {
-            System.err.println("[Logger] Error limpiando Redis: " + e.getMessage());
+        if (redisAvailable && jedisPool != null) {
+            try (Jedis jedis = jedisPool.getResource()) {
+                jedis.del(redisKey);
+            } catch (Exception e) {
+                redisAvailable = false;
+            }
         }
     }
 
