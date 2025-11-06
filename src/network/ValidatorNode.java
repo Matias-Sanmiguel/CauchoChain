@@ -5,12 +5,26 @@ import model.CryptoUtils;
 public class ValidatorNode {
     private float stake;
     private String publicKey;
+    private String alias;
+    private String address;
+    private boolean active;
 
     private static final CryptoUtils crypto = new CryptoUtils();
 
     public ValidatorNode(float stake, String publicKey) {
         this.stake = stake;
         this.publicKey = publicKey;
+        this.alias = "Nodo-" + System.currentTimeMillis();
+        this.address = generateAddress();
+        this.active = true;
+    }
+
+    public ValidatorNode(String alias, String address) {
+        this.stake = 0.0f;
+        this.publicKey = null;
+        this.alias = alias;
+        this.address = address;
+        this.active = true;
     }
 
     public ValidatorNode(float stake) {
@@ -19,6 +33,10 @@ public class ValidatorNode {
 
     public ValidatorNode() {
         this(0.0f, null);
+    }
+
+    private String generateAddress() {
+        return "0x" + Integer.toHexString(hashCode());
     }
 
     public float getStake() {
@@ -35,6 +53,30 @@ public class ValidatorNode {
 
     public void setPublicKey(String publicKey) {
         this.publicKey = publicKey;
+    }
+
+    public String getAlias() {
+        return alias;
+    }
+
+    public void setAlias(String alias) {
+        this.alias = alias;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 
 

@@ -5,6 +5,7 @@ import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import model.*;
 import wallet.*;
 import miner.*;
+import network.*;
 import utils.Logger;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -13,6 +14,7 @@ import java.util.*;
 public class BlockchainTUI {
     private final Blockchain blockchain;
     private final Map<String, Wallet> wallets = new LinkedHashMap<>();
+    private final Map<String, ValidatorNode> nodes = new LinkedHashMap<>();
     private final Logger logger;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 
@@ -23,8 +25,8 @@ public class BlockchainTUI {
     private String inputPrompt = "";
     private String lastState = "";
 
-    private int currentTab = 0; // 0=Blockchain, 1=Wallets, 2=Mining, 3=Config, 4=Transactions
-    private final String[] TAB_NAMES = {"Blockchain", "Wallets", "Mineria", "Config", "Transacciones"};
+    private int currentTab = 0; // 0=Blockchain, 1=Wallets, 2=Mining, 3=Nodes, 4=Config, 5=Transactions
+    private final String[] TAB_NAMES = {"Blockchain", "Wallets", "Mineria", "Nodos", "Config", "Transacciones"};
 
     private boolean isMining = false;
     private Miner activeMiner;
@@ -100,7 +102,7 @@ public class BlockchainTUI {
 
         if (c == null) {
             if (type == KeyType.ArrowLeft) currentTab = Math.max(0, currentTab - 1);
-            if (type == KeyType.ArrowRight) currentTab = Math.min(4, currentTab + 1);
+            if (type == KeyType.ArrowRight) currentTab = Math.min(5, currentTab + 1);
             return;
         }
 
@@ -110,8 +112,10 @@ public class BlockchainTUI {
             case '3': currentTab = 2; break;
             case '4': currentTab = 3; break;
             case '5': currentTab = 4; break;
+            case '6': currentTab = 5; break;
             case 't': openTxInput(); break;
             case 'w': openWalletInput(); break;
+            case 'n': openNodeInput(); break;
             case 'm': toggleMining(); break;
             case 's': showStats(); break;
             case 'c': openConfigInput(); break;
@@ -145,6 +149,12 @@ public class BlockchainTUI {
         inputBuffer = "";
     }
 
+    private void openNodeInput() {
+        inputMode = "node";
+        inputPrompt = "ALIAS DIRECCION (ej: MiNodo 127.0.0.1:5000):";
+        inputBuffer = "";
+    }
+
     private void openConfigInput() {
         inputMode = "config";
         inputPrompt = "DIFICULTAD RECOMPENSA (ej: 4 50.0):";
@@ -158,6 +168,7 @@ public class BlockchainTUI {
 
         if (mode.equals("tx")) handleTx(text);
         else if (mode.equals("wallet")) handleCreateWallet(text);
+        else if (mode.equals("node")) handleCreateNode(text);
         else if (mode.equals("config")) handleConfig(text);
     }
 
@@ -207,6 +218,31 @@ public class BlockchainTUI {
             logger.info("Wallet creada: " + alias);
         } catch (Exception e) {
             logger.error("Error creando wallet: " + e.getMessage());
+        }
+    }
+
+    private void handleCreateNode(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 2) {
+                logger.error("Formato invalido. Usa: ALIAS DIRECCION");
+                return;
+            }
+
+            String alias = parts[0];
+            String address = parts[1];
+
+            if (nodes.containsKey(alias)) {
+                logger.error("Nodo ya existe: " + alias);
+                return;
+            }
+
+            ValidatorNode newNode = new ValidatorNode(alias, address);
+            nodes.put(alias, newNode);
+
+            logger.info("Nodo creado: " + alias + " -> " + address);
+        } catch (Exception e) {
+            logger.error("Error creando nodo: " + e.getMessage());
         }
     }
 
@@ -313,8 +349,9 @@ public class BlockchainTUI {
                         case 0: drawBlockchainTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
                         case 1: drawWalletsTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
                         case 2: drawMiningTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
-                        case 3: drawConfigTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
-                        case 4: drawTransactionsTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 3: drawNodesTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 4: drawConfigTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 5: drawTransactionsTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
                     }
                 } catch (Exception e) {
                     logger.error("Error dibujando tab: " + e.getMessage());
@@ -443,6 +480,24 @@ public class BlockchainTUI {
         drawLineAt(x + 2, y + 9, "Recompensa por bloque: " + blockchain.getMiningReward(), TextColor.ANSI.MAGENTA);
 
         drawLineAt(x + 2, y + height - 3, "Presiona [M] para " + (isMining ? "PAUSAR" : "INICIAR"), TextColor.ANSI.YELLOW);
+    }
+
+    private void drawNodesTab(int x, int y, int width, int height) throws IOException {
+        drawPanel(x, y, width, height, "Nodos de Validacion", TextColor.ANSI.CYAN);
+
+        // Encabezados
+        drawLineAt(x + 2, y + 2, "Alias                Direccion                 Estado", TextColor.ANSI.CYAN);
+        drawLineAt(x + 2, y + 3, "──────────────────────────────────────────────────", TextColor.ANSI.CYAN);
+
+        int rowCount = 0;
+        for (ValidatorNode node : nodes.values()) {
+            if (rowCount >= height - 5) break;
+            String line = String.format("%-20s %-25s %s", node.getAlias(), node.getAddress(), node.isActive() ? "Activo" : "Inactivo");
+            drawLineAt(x + 2, y + 4 + rowCount, line, TextColor.ANSI.WHITE);
+            rowCount++;
+        }
+
+        drawLineAt(x + 2, y + height - 3, "Presiona [N] para agregar nodo", TextColor.ANSI.YELLOW);
     }
 
     private void drawConfigTab(int x, int y, int width, int height) throws IOException {
@@ -601,6 +656,7 @@ public class BlockchainTUI {
         logger.info("[←→] Navegar tabs");
         logger.info("[T] Crear transaccion");
         logger.info("[W] Crear wallet");
+        logger.info("[N] Crear nodo");
         logger.info("[M] Iniciar/pausar mineria");
         logger.info("[C] Configurar parametros");
         logger.info("[S] Ver estadisticas");
