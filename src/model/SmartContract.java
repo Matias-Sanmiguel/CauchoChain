@@ -23,7 +23,7 @@ public class SmartContract extends WalletBase {
         this.state = new HashMap<>();
     }
 
-    //Establece el registro que contiene este contrato (relación de composición).
+    //Establece el registro que contiene este contrato (composición).
     public void setRegistry(ContractRegistry registry) {
         this.registry = registry;
     }
@@ -46,8 +46,6 @@ public class SmartContract extends WalletBase {
 
     
     //Ejecuta el contrato con los parámetros dados.
-    //Esta implementación mínima simplemente fusiona `params` en el `state`.
-    //Implementaciones reales deberían interpretar `code` y mutar `state` según la lógica del contrato.
     public void execute(Map<String, Object> params) {
         if (params == null) return;
         // Fusiona los parámetros en el estado (sobrescribe claves existentes)
@@ -55,7 +53,7 @@ public class SmartContract extends WalletBase {
     }
 
     
-    //Validación básica: asegura que `id` y `code` existan. Se puede sobrescribir para comprobaciones más completas.
+    //Validación básica: asegura que `id` y `code` existan
     public boolean validate() {
         return id != null && code != null && !code.isEmpty();
     }

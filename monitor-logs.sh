@@ -10,7 +10,7 @@ POLL_INTERVAL="${1:-1}"
 SHOW_LAST="${2:-20}"
 
 if ! docker ps --format '{{.Names}}' | grep -q "^${REDIS_CONTAINER}$"; then
-    echo "❌ Contenedor Redis no está corriendo"
+    echo "Contenedor Redis no está corriendo"
     echo "   Ejecuta: ./start-all.sh"
     exit 1
 fi

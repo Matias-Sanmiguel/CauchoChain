@@ -5,19 +5,17 @@ import network.INetworkNode;
 
 public abstract class BlockchainCore {
 
-    // ATRIBUTOS BÁSICOS
     private List<Block> chain;
     private int difficulty;
     private float reward;
     private List<INetworkNode> nodes;
 
-    // CONSTRUCTOR
 
     public BlockchainCore() {
         this.chain = new ArrayList<>();
         this.nodes = new ArrayList<>();
-        this.difficulty = 2; // nivel inicial de dificultad
-        this.reward = 50f;   // recompensa por bloque minado
+        this.difficulty = 2;
+        this.reward = 50f;
 
 
         Block genesis = new Block(0, new ArrayList<>(), "0", "GENESIS", 0L);
@@ -29,7 +27,7 @@ public abstract class BlockchainCore {
     public void addBlock(Block newBlock) {
         Block lastBlock = getLastBlock();
 
-        // ignorar si el bloque es igal al anterior
+        // ignorar si el bloque es igual al anterior
         if (newBlock.getHash().equals(lastBlock.getHash())) {
             System.out.println("Info: bloque ya presente, ignorando.");
             return;
@@ -47,7 +45,7 @@ public abstract class BlockchainCore {
             return;
         }
 
-        // versi es valido el bloque
+        // ver si es valido el bloque
         String recalculated = newBlock.calculateHash();
         if (!recalculated.equals(newBlock.getHash())) {
             System.out.println("Error: hash inválido para el bloque.");

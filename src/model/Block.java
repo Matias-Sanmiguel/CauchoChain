@@ -15,7 +15,7 @@ public class Block {
     private int nonce;
     private static final CryptoUtils crypto = new CryptoUtils();
     private String minerAddress;
-    private String signature; // firma del bloque (opcional)
+    private String signature; // firma del bloque
 
 
     public Block(int index, List<Transaction> transactions, String prevHash, String minerAddress) {
@@ -52,7 +52,7 @@ public class Block {
         return crypto.hash(datoParaHash);
     }
 
-    // La merkleRoot es básicamente una forma de reducir las transacciones de un bloque que le des, es una formula matematica que se usa para hashear
+    // MerkleRoot es básicamente una forma de reducir las transacciones de un bloque que le des, es una formula matematica que se usa para hashear
     public String getMerkleRoot() {
         List<String> treeLayer = new ArrayList<>();
         for (Transaction tx : transactions) {

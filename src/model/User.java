@@ -5,7 +5,7 @@ public class User {
 
     private String name;
     private UUID userId;
-    // Alias de la wallet asociada a este usuario (puede ser null si no tiene wallet)
+    // Alias de la wallet asociada a este usuario
     private String alias;
 
     public User(String name) {

@@ -50,7 +50,7 @@ public class Blockchain extends BlockchainCore {
         logger.info("Transacción creada: " + tx.fromAddress + " -> " + tx.toAddress + " (" + tx.amount + ")");
     }
 
-    // Minado de las transacciones pendientes. Recompensa al miner.
+    // Minado de las transacciones pendientes. Recompensa al miner
     public void minePendingTransactions(Miner miner) {
         if (pendingTransactions.isEmpty()) {
             logger.warning("No hay transacciones pendientes para minar.");
@@ -65,7 +65,6 @@ public class Blockchain extends BlockchainCore {
 
         Block newBlock = new Block(getChain().size(), transactionsToMine, prevHash, miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
 
-        // Proof of Work
         String target = new String(new char[difficulty]).replace('\0', '0');
         long startTime = System.currentTimeMillis();
 

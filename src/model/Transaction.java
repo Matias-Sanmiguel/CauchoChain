@@ -24,7 +24,7 @@ public class Transaction {
         this.signature = null;
     }
 
-    // CALCULA EL HASh
+    // CALCULA EL HASH
     public String calculateHash() {
         String data = (fromAddress == null ? "" : fromAddress) + (toAddress == null ? "" : toAddress) + amount + fee + (signature == null ? "" : signature);
         return new CryptoUtils().hash(data);

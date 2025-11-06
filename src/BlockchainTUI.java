@@ -35,7 +35,6 @@ public class BlockchainTUI {
         this.logger = Logger.getInstance();
     }
 
-    // ==================== START / STOP ====================
     public void start() throws IOException {
         screen = new DefaultTerminalFactory().createScreen();
         screen.startScreen();
@@ -69,7 +68,6 @@ public class BlockchainTUI {
         }
     }
 
-    // ==================== INITIALIZATION ====================
     private void initializeWallets() {
         try {
             Wallet wallet1 = new Wallet("Wallet-1");
@@ -91,7 +89,6 @@ public class BlockchainTUI {
         }
     }
 
-    // ==================== INPUT HANDLING ====================
     private void handleInput(KeyStroke key) {
         KeyType type = key.getKeyType();
         Character c = key.getCharacter();
@@ -136,7 +133,6 @@ public class BlockchainTUI {
         }
     }
 
-    // ==================== INPUT MODES ====================
     private void openTxInput() {
         inputMode = "tx";
         inputPrompt = "FROM TO AMOUNT (ej: Wallet-1 Wallet-2 10.5)";
@@ -165,7 +161,6 @@ public class BlockchainTUI {
         else if (mode.equals("config")) handleConfig(text);
     }
 
-    // ==================== TRANSACTION HANDLING ====================
     private void handleTx(String input) {
         try {
             String[] parts = input.split("\\s+");
@@ -235,7 +230,6 @@ public class BlockchainTUI {
         }
     }
 
-    // ==================== MINING ====================
     private void toggleMining() {
         if (!isMining) {
             startMining();
@@ -292,7 +286,6 @@ public class BlockchainTUI {
         logger.info("Mineria detenida");
     }
 
-    // ==================== DRAWING ====================
     private void draw() throws IOException {
         try {
             screen.clear();
@@ -344,22 +337,21 @@ public class BlockchainTUI {
         try {
             drawPanel(x, y, width, height, "ENTRADA DE DATOS", TextColor.ANSI.YELLOW);
 
-            // Linea 1: Instruccion del input
+            // Instruccion del input
             String instructionLine = "Modo: " + inputMode.toUpperCase();
             drawLineAt(x + 2, y + 2, instructionLine, TextColor.ANSI.MAGENTA);
 
-            // Linea 2: El prompt
+            // Prompt
             drawLineAt(x + 2, y + 3, "-> " + inputPrompt, TextColor.ANSI.YELLOW);
 
-            // Linea 4: El input del usuario con cursor parpadeante
+            // Input del usuario con cursor parpadeante
             String inputLine = "> " + inputBuffer + "_";
             drawLineAt(x + 2, y + 4, inputLine, TextColor.ANSI.GREEN);
 
-            // Linea 5: Instrucciones de control
+            // Instrucciones de control
             String controlLine = "[ENTER] Confirmar  |  [ESC] Cancelar  |  [BACKSPACE] Borrar";
             drawLineAt(x + 2, y + 5, controlLine, TextColor.ANSI.CYAN);
 
-            // Linea 6: Informacion adicional
             String infoLine = "Caracteres: " + inputBuffer.length();
             drawLineAt(x + 2, y + 6, infoLine, TextColor.ANSI.WHITE);
         } catch (Exception ex) {
@@ -404,7 +396,7 @@ public class BlockchainTUI {
         drawPanel(x, y, width / 2 - 1, height, "Wallets", TextColor.ANSI.MAGENTA);
         drawPanel(x + width / 2 + 1, y, width / 2 - 1, height, "Informacion", TextColor.ANSI.GREEN);
 
-        // Left: Wallets list
+        // Wallets list (izquierda)
         drawLineAt(x + 2, y + 2, "Alias", TextColor.ANSI.MAGENTA);
         int rowCount = 0;
         for (String alias : wallets.keySet()) {
@@ -413,7 +405,7 @@ public class BlockchainTUI {
             rowCount++;
         }
 
-        // Right: Wallet balances
+        // Wallet balances (derecha)
         int rightX = x + width / 2 + 3;
         drawLineAt(rightX, y + 2, "Alias          Balance", TextColor.ANSI.GREEN);
         drawLineAt(rightX, y + 3, "──────────────────────", TextColor.ANSI.GREEN);
@@ -477,7 +469,7 @@ public class BlockchainTUI {
         drawPanel(x, y, leftWidth, height, "Transacciones Confirmadas", TextColor.ANSI.BLUE);
         drawPanel(x + leftWidth + 2, y, rightWidth, height, "Transacciones Pendientes", TextColor.ANSI.YELLOW);
 
-        // Confirmed
+        // Confirmado
         drawLineAt(x + 2, y + 2, "De           Para         Monto", TextColor.ANSI.BLUE);
         int rowCount = 0;
         for (Block block : blockchain.getChain()) {
@@ -492,7 +484,7 @@ public class BlockchainTUI {
             if (rowCount >= height - 5) break;
         }
 
-        // Pending
+        // Pendiente
         drawLineAt(x + leftWidth + 4, y + 2, "De           Para         Monto", TextColor.ANSI.YELLOW);
         rowCount = 0;
         for (Transaction tx : blockchain.pendingTransactions) {
@@ -523,7 +515,6 @@ public class BlockchainTUI {
         }
     }
 
-    // ==================== UI HELPERS ====================
     private void drawBox(int x, int y, int width, int height, TextColor color) throws IOException {
         for (int i = 0; i < width; i++) {
             screen.setCharacter(x + i, y, new TextCharacter('═', color, TextColor.ANSI.BLACK));
@@ -565,7 +556,7 @@ public class BlockchainTUI {
             // Validar coordenadas
             if (x < 0 || y < 0 || x >= maxX || y >= maxY) return;
 
-            // Escribir solo caracteres validos dentro de limites
+            // Escribir solo caracteres validos dentro de los limites
             for (int i = 0; i < text.length() && (x + i) < maxX; i++) {
                 char ch = text.charAt(i);
                 if (ch >= 32 && ch < 127) {
@@ -573,7 +564,6 @@ public class BlockchainTUI {
                 }
             }
         } catch (Exception ex) {
-            // Silenciosamente ignorar errores de dibujo
         }
     }
 
@@ -581,7 +571,6 @@ public class BlockchainTUI {
         return (s == null) ? "" : s.length() > len ? s.substring(0, Math.max(0, len - 2)) + ".." : s;
     }
 
-    // ==================== STATE & STATS ====================
     private String buildStateHash() {
         StringBuilder sb = new StringBuilder();
         sb.append(blockchain.getChain().size()).append("|");
@@ -589,7 +578,7 @@ public class BlockchainTUI {
         sb.append("|").append(blockchain.pendingTransactions.size());
         sb.append("|").append(currentTab).append("|").append(isMining);
         sb.append("|").append(logger.getLogs().size());
-        // Incluir el estado del input para que se redibuje en tiempo real
+        // Incluye el estado del input para que se redibuje en tiempo real
         sb.append("|").append(inputMode).append("|").append(inputBuffer);
         return sb.toString();
     }
@@ -620,7 +609,6 @@ public class BlockchainTUI {
         lastState = "";
     }
 
-    // ==================== WALLET MANAGEMENT ====================
     public void addWallet(String alias, Wallet w) {
         wallets.put(alias, w);
         logger.info("Wallet anadida: " + alias);
