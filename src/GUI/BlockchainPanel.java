@@ -49,9 +49,13 @@ public class BlockchainPanel extends JPanel {
     }
 
     private void refresh() {
+        int totalBlocks = blockchain.getChain().size();
+        int blocksPerRow = 6;
+        int rows = (int) Math.ceil((double) totalBlocks / blocksPerRow);
+
         chainView.setPreferredSize(new Dimension(
-            blockchain.getChain().size() * 200,
-            300
+            blocksPerRow * 200 + 100,
+            Math.max(300, rows * 150 + 100)
         ));
         chainView.repaint();
     }
@@ -60,56 +64,74 @@ public class BlockchainPanel extends JPanel {
         Graphics2D g2d = (Graphics2D) g;
         g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
 
+        int blockWidth = 200;
+        int blockHeight = 150;
+        int blocksPerRow = 6;
         int x = 50;
-        int y = 100;
-        int width = 150;
-        int height = 100;
+        int y = 50;
 
-        for (Block block : blockchain.getChain()) {
-            // Dibujar el bloque
+        for (int i = 0; i < blockchain.getChain().size(); i++) {
+            Block block = blockchain.getChain().get(i);
+
+            int row = i / blocksPerRow;
+            int col = i % blocksPerRow;
+            int drawX = 50 + col * blockWidth;
+            int drawY = 50 + row * blockHeight;
+
             if (block == selectedBlock) {
                 g2d.setColor(new Color(200, 230, 255));
             } else {
                 g2d.setColor(Color.WHITE);
             }
-            g2d.fillRect(x, y, width, height);
+            g2d.fillRect(drawX, drawY, 150, 100);
             g2d.setColor(Color.BLACK);
-            g2d.drawRect(x, y, width, height);
+            g2d.drawRect(drawX, drawY, 150, 100);
 
-            // Dibujar flecha al siguiente bloque
-            if (blockchain.getChain().indexOf(block) < blockchain.getChain().size() - 1) {
-                g2d.drawLine(x + width, y + height/2, x + width + 50, y + height/2);
-                g2d.drawLine(x + width + 50, y + height/2, x + width + 40, y + height/2 - 5);
-                g2d.drawLine(x + width + 50, y + height/2, x + width + 40, y + height/2 + 5);
-            }
-
-            // Información del bloque
-            g2d.drawString("Bloque #" + block.getIndex(), x + 10, y + 20);
+            g2d.drawString("Bloque #" + block.getIndex(), drawX + 10, drawY + 20);
             String hash = block.getHash();
-            g2d.drawString("Hash: " + hash.substring(0, 8) + "...", x + 10, y + 40);
-            g2d.drawString("Tx: " + block.getTransactions().size(), x + 10, y + 60);
+            g2d.drawString("Hash: " + hash.substring(0, 8) + "...", drawX + 10, drawY + 40);
+            g2d.drawString("Tx: " + block.getTransactions().size(), drawX + 10, drawY + 60);
 
-            x += 200;
+            if (i < blockchain.getChain().size() - 1) {
+                int nextCol = (i + 1) % blocksPerRow;
+                int nextRow = (i + 1) / blocksPerRow;
+
+                if (nextCol == 0) {
+                    g2d.drawLine(drawX + 150, drawY + 50, drawX + 150, drawY + 100 + 20);
+                    g2d.drawLine(drawX + 150, drawY + 100 + 20, 50, drawY + 100 + 20);
+                    g2d.drawLine(50, drawY + 100 + 20, 50, drawY + 150);
+                } else {
+                    g2d.drawLine(drawX + 150, drawY + 50, drawX + 150 + 30, drawY + 50);
+                    g2d.drawLine(drawX + 150 + 30, drawY + 50, drawX + 150 + 20, drawY + 40);
+                    g2d.drawLine(drawX + 150 + 30, drawY + 50, drawX + 150 + 20, drawY + 60);
+                }
+            }
         }
     }
 
     private class BlockClickListener extends MouseAdapter {
         @Override
         public void mouseClicked(MouseEvent e) {
-            int x = e.getX();
-            int y = e.getY();
+            int clickX = e.getX();
+            int clickY = e.getY();
+            int blocksPerRow = 6;
+            int blockWidth = 200;
+            int blockHeight = 150;
 
-            // Determinar qué bloque fue clickeado
-            int blockX = 50;
-            for (Block block : blockchain.getChain()) {
-                if (x >= blockX && x <= blockX + 150 &&
-                    y >= 100 && y <= 200) {
+            for (int i = 0; i < blockchain.getChain().size(); i++) {
+                int row = i / blocksPerRow;
+                int col = i % blocksPerRow;
+                int drawX = 50 + col * blockWidth;
+                int drawY = 50 + row * blockHeight;
+
+                if (clickX >= drawX && clickX <= drawX + 150 &&
+                    clickY >= drawY && clickY <= drawY + 100) {
+                    Block block = blockchain.getChain().get(i);
                     showBlockDetails(block);
                     selectedBlock = block;
                     chainView.repaint();
                     return;
                 }
-                blockX += 200;
             }
         }
     }

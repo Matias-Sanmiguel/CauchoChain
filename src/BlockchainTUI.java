@@ -420,9 +420,9 @@ public class BlockchainTUI {
         int startIdx = Math.max(0, blocks.size() - maxRows);
 
         drawLineAt(x + 2, y + 2, "Indice | Hash", TextColor.ANSI.CYAN);
-        drawLineAt(x + 2, y + 3, "————————————————────────────────────────", TextColor.ANSI.CYAN);
+        drawLineAt(x + 2, y + 3, "--------------------------------------------", TextColor.ANSI.CYAN);
 
-        for (int i = startIdx; i < blocks.size(); i++) {
+        for (int i = startIdx; i < blocks.size() && (i - startIdx) < maxRows; i++) {
             Block b = blocks.get(i);
             String line = String.format("%4d   | %s", b.getIndex(), truncate(b.getHash(), width - 15));
             drawLineAt(x + 2, y + 4 + (i - startIdx), line, TextColor.ANSI.WHITE);

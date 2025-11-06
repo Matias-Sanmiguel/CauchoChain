@@ -16,17 +16,14 @@ public class TransactionPanel extends JPanel {
         this.blockchain = blockchain;
         setLayout(new BorderLayout());
 
-        // Panel de estadísticas
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         statsLabel = new JLabel();
         updateStats();
         statsPanel.add(statsLabel);
         add(statsPanel, BorderLayout.NORTH);
 
-        // Panel de tablas
         JPanel tablesPanel = new JPanel(new GridLayout(2, 1));
 
-        // Tabla de transacciones pendientes
         String[] columnNames = {"De", "Para", "Monto", "Estado"};
         pendingTable = new JTable(new Object[0][4], columnNames);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
@@ -34,7 +31,6 @@ public class TransactionPanel extends JPanel {
         pendingPanel.add(new JLabel("Transacciones Pendientes"), BorderLayout.NORTH);
         pendingPanel.add(pendingScroll, BorderLayout.CENTER);
 
-        // Tabla de transacciones confirmadas
         confirmedTable = new JTable(new Object[0][4], columnNames);
         JScrollPane confirmedScroll = new JScrollPane(confirmedTable);
         JPanel confirmedPanel = new JPanel(new BorderLayout());
@@ -46,12 +42,10 @@ public class TransactionPanel extends JPanel {
 
         add(tablesPanel, BorderLayout.CENTER);
 
-        // Botón de actualización
         JButton refreshButton = new JButton("Actualizar");
         refreshButton.addActionListener(e -> updateTables());
         add(refreshButton, BorderLayout.SOUTH);
 
-        // Iniciar actualización periódica
         Timer timer = new Timer(5000, e -> updateTables());
         timer.start();
     }
@@ -88,15 +82,14 @@ public class TransactionPanel extends JPanel {
     }
 
     private void updateTables() {
-        // Actualizar tabla de pendientes
         List<Transaction> pending = blockchain.pendingTransactions;
         Object[][] pendingData = new Object[pending.size()][4];
         for (int i = 0; i < pending.size(); i++) {
             Transaction tx = pending.get(i);
             pendingData[i] = new Object[]{
-                tx.fromAddress,
-                tx.toAddress,
-                tx.amount,
+                tx.fromAddress != null ? truncate(tx.fromAddress, 15) : "SISTEMA",
+                truncate(tx.toAddress, 15),
+                String.format("%.2f", tx.amount),
                 "Pendiente"
             };
         }
@@ -105,15 +98,14 @@ public class TransactionPanel extends JPanel {
             new String[]{"De", "Para", "Monto", "Estado"}
         ));
 
-        // Actualizar tabla de confirmadas
-        List<Transaction> confirmed = blockchain.txPool.getValidTransactions();
+        List<Transaction> confirmed = getConfirmedTransactions();
         Object[][] confirmedData = new Object[confirmed.size()][4];
         for (int i = 0; i < confirmed.size(); i++) {
             Transaction tx = confirmed.get(i);
             confirmedData[i] = new Object[]{
-                tx.fromAddress,
-                tx.toAddress,
-                tx.amount,
+                tx.fromAddress != null ? truncate(tx.fromAddress, 15) : "SISTEMA",
+                truncate(tx.toAddress, 15),
+                String.format("%.2f", tx.amount),
                 "Confirmada"
             };
         }
@@ -124,4 +116,18 @@ public class TransactionPanel extends JPanel {
 
         updateStats();
     }
+
+    private List<Transaction> getConfirmedTransactions() {
+        java.util.ArrayList<Transaction> confirmed = new java.util.ArrayList<>();
+        for (var block : blockchain.getChain()) {
+            confirmed.addAll(block.getTransactions());
+        }
+        return confirmed;
+    }
+
+    private String truncate(String s, int len) {
+        if (s == null) return "";
+        return s.length() > len ? s.substring(0, len - 2) + ".." : s;
+    }
 }
+
