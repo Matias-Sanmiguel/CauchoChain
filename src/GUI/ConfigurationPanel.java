@@ -15,7 +15,7 @@ public class ConfigurationPanel extends JPanel {
         this.blockchain = blockchain;
         setLayout(new BorderLayout());
 
-        // Panel de dificultad
+        //dificultad
         JPanel difficultyPanel = new JPanel();
         difficultyPanel.setBorder(BorderFactory.createTitledBorder("Configuración de Minería"));
         difficultyPanel.setLayout(new BoxLayout(difficultyPanel, BoxLayout.Y_AXIS));
@@ -30,7 +30,7 @@ public class ConfigurationPanel extends JPanel {
         difficultyPanel.add(difficultyLabel);
         difficultyPanel.add(difficultySlider);
 
-        // Panel de nodos
+        // nodos
         JPanel nodesPanel = new JPanel(new BorderLayout());
         nodesPanel.setBorder(BorderFactory.createTitledBorder("Nodos Conectados"));
 
@@ -38,7 +38,7 @@ public class ConfigurationPanel extends JPanel {
         JList<String> nodesList = new JList<>(nodesListModel);
         nodesPanel.add(new JScrollPane(nodesList), BorderLayout.CENTER);
 
-        // Botones de control de red
+        // control de red
         JPanel networkControlPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton addNodeButton = new JButton("Agregar Nodo");
         JButton removeNodeButton = new JButton("Eliminar Nodo");
@@ -51,14 +51,13 @@ public class ConfigurationPanel extends JPanel {
 
         nodesPanel.add(networkControlPanel, BorderLayout.SOUTH);
 
-        // Layout principal
         JPanel mainPanel = new JPanel(new GridLayout(2, 1, 10, 10));
         mainPanel.add(difficultyPanel);
         mainPanel.add(nodesPanel);
 
         add(mainPanel, BorderLayout.CENTER);
 
-        // Inicializar con algunos nodos simulados
+        // nodos simulados
         addSimulatedNode();
         addSimulatedNode();
     }

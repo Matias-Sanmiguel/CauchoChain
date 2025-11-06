@@ -29,7 +29,7 @@ public class Blockchain extends BlockchainCore {
         return getLastBlock();
     }
 
-    // Agrega transacción SOLO al pool (sin confirmar aún)
+    // agrego transaccion al pool
     public void addTransactionToPool(Transaction tx) {
         if (tx == null || !tx.isValid()) {
             logger.error("Transacción inválida: " + (tx != null ? tx.toString() : "null"));
@@ -39,7 +39,7 @@ public class Blockchain extends BlockchainCore {
         logger.debug("Transacción agregada al pool: " + tx.toAddress + " -> " + tx.amount);
     }
 
-    // Agrega transacción al pool y a pendingTransactions (para uso interno/minería)
+    // agrego transacción al pool y a pendingTransactions
     public void createTransaction(Transaction tx) {
         if (tx == null || !tx.isValid()) {
             logger.error("Transacción inválida para crear: " + (tx != null ? tx.toString() : "null"));
@@ -50,7 +50,7 @@ public class Blockchain extends BlockchainCore {
         logger.info("Transacción creada: " + tx.fromAddress + " -> " + tx.toAddress + " (" + tx.amount + ")");
     }
 
-    // Minado de las transacciones pendientes. Recompensa al miner.
+    // mino transacciones pendientes y recompenso al miner
     public void minePendingTransactions(Miner miner) {
         if (pendingTransactions.isEmpty()) {
             logger.warning("No hay transacciones pendientes para minar.");
@@ -76,20 +76,20 @@ public class Blockchain extends BlockchainCore {
 
         long miningTime = System.currentTimeMillis() - startTime;
 
-        // Validar transacciones del bloque
+        // valido transacciones
         if (!newBlock.hasValidTransactions()) {
             logger.error("El bloque contiene transacciones inválidas");
             throw new RuntimeException("El bloque contiene transacciones inválidas.");
         }
 
-        // Agregar bloque minado a la cadena
+        // agrego el bloque minado a la blockchain
         getChain().add(newBlock);
 
-        // Limpiar pool: quitar transacciones minadas
+        // limpio transacciones minadas del pool y pendientes
         this.txPool.removeTransactions(transactionsToMine);
         this.pendingTransactions.removeAll(transactionsToMine);
 
-        // Crear transacción de recompensa para el minero (se añade a pendientes para el siguiente bloque)
+        // creo transacción de recompensa para el miner (se añade a pendientes para el siguiente bloque)
         Transaction rewardTx = new Transaction(null, miner.getAddress(), miningReward);
         this.pendingTransactions.add(rewardTx);
         this.txPool.addTransaction(rewardTx);
@@ -100,7 +100,7 @@ public class Blockchain extends BlockchainCore {
     public float getBalance(String address) {
         float balance = 0.0f;
 
-        // Solo recorrer transacciones confirmadas (en bloques minados)
+        // solo recorre transacciones confirmadas (en bloques minados)
         for (Block block : getChain()) {
             for (Transaction tx : block.getTransactions()) {
                 if (address.equals(tx.fromAddress)) {
@@ -112,7 +112,7 @@ public class Blockchain extends BlockchainCore {
             }
         }
 
-        // Revisar transacciones pendientes también
+        // reviso transacciones pendientes
         for (Transaction tx : pendingTransactions) {
             if (address.equals(tx.fromAddress)) {
                 balance -= tx.amount;

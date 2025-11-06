@@ -24,7 +24,7 @@ public class MinerPanel extends JPanel {
         super(new BorderLayout());
         this.blockchain = blockchain;
 
-        // Inicializar componentes antes de cualquier otra operación
+        //inicializo
         this.miner = new Miner(2.0f, "GUI_Miner");
         this.minedBlocksModel = new DefaultListModel<>();
         this.logArea = new JTextArea(10, 40);
@@ -32,7 +32,7 @@ public class MinerPanel extends JPanel {
         this.hashRateLabel = new JLabel("Tasa de Hash: 0 H/s");
         this.rewardLabel = new JLabel("Recompensa Total: 0");
 
-        // Panel superior con controles
+        // panel con controles
         JPanel controlPanel = new JPanel(new GridLayout(2, 2, 5, 5));
         JButton startButton = new JButton("Iniciar Minería");
         JButton stopButton = new JButton("Detener Minería");
@@ -44,26 +44,25 @@ public class MinerPanel extends JPanel {
         controlPanel.add(hashRateLabel);
         controlPanel.add(rewardLabel);
 
-        // Barra de progreso
+        // barra de progreso
         miningProgress = new JProgressBar(0, 100);
         miningProgress.setStringPainted(true);
         miningProgress.setString("En espera...");
 
-        // Panel central con progreso y log
+        //panel de procesos y logs
         JPanel centerPanel = new JPanel(new BorderLayout());
         logArea = new JTextArea(10, 40);
         logArea.setEditable(false);
         centerPanel.add(miningProgress, BorderLayout.NORTH);
         centerPanel.add(new JScrollPane(logArea), BorderLayout.CENTER);
 
-        // Panel derecho con bloques minados
+        // panel con bloques minados
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBorder(BorderFactory.createTitledBorder("Bloques Minados"));
         minedBlocksModel = new DefaultListModel<>();
         JList<String> minedBlocksList = new JList<>(minedBlocksModel);
         rightPanel.add(new JScrollPane(minedBlocksList), BorderLayout.CENTER);
 
-        // Layout principal
         JPanel mainPanel = new JPanel(new BorderLayout());
         mainPanel.add(controlPanel, BorderLayout.NORTH);
         mainPanel.add(centerPanel, BorderLayout.CENTER);
@@ -76,11 +75,9 @@ public class MinerPanel extends JPanel {
         splitPane.setDividerLocation(600);
         add(splitPane);
 
-        // Acciones de los botones
         startButton.addActionListener(this::startMining);
         stopButton.addActionListener(this::stopMining);
 
-        // Timer para actualizar UI
         Timer uiTimer = new Timer(1000, e -> SwingUtilities.invokeLater(() -> {
             updateStats();
             updateProgress();

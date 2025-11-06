@@ -20,7 +20,7 @@ public class BlockchainPanel extends JPanel {
         this.dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
         setLayout(new BorderLayout());
 
-        // Panel para la vista gráfica de la cadena
+        // panel para la vista grafica de blockchain
         chainView = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -31,17 +31,14 @@ public class BlockchainPanel extends JPanel {
         chainView.setBackground(Color.WHITE);
         chainView.addMouseListener(new BlockClickListener());
 
-        // Scroll para la vista de la cadena
         JScrollPane scrollPane = new JScrollPane(chainView);
         scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_ALWAYS);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Botón de actualización
         JButton refreshButton = new JButton("Actualizar Vista");
         refreshButton.addActionListener(e -> refresh());
         add(refreshButton, BorderLayout.SOUTH);
 
-        // Timer para actualización automática
         Timer timer = new Timer(5000, e -> refresh());
         timer.start();
 
@@ -66,7 +63,6 @@ public class BlockchainPanel extends JPanel {
         int height = 100;
 
         for (Block block : blockchain.getChain()) {
-            // Dibujar el bloque
             if (block == selectedBlock) {
                 g2d.setColor(new Color(200, 230, 255));
             } else {
@@ -76,14 +72,13 @@ public class BlockchainPanel extends JPanel {
             g2d.setColor(Color.BLACK);
             g2d.drawRect(x, y, width, height);
 
-            // Dibujar flecha al siguiente bloque
             if (blockchain.getChain().indexOf(block) < blockchain.getChain().size() - 1) {
                 g2d.drawLine(x + width, y + height/2, x + width + 50, y + height/2);
                 g2d.drawLine(x + width + 50, y + height/2, x + width + 40, y + height/2 - 5);
                 g2d.drawLine(x + width + 50, y + height/2, x + width + 40, y + height/2 + 5);
             }
 
-            // Información del bloque
+            // info del bloque
             g2d.drawString("Bloque #" + block.getIndex(), x + 10, y + 20);
             String hash = block.getHash();
             g2d.drawString("Hash: " + hash.substring(0, 8) + "...", x + 10, y + 40);
@@ -99,7 +94,6 @@ public class BlockchainPanel extends JPanel {
             int x = e.getX();
             int y = e.getY();
 
-            // Determinar qué bloque fue clickeado
             int blockX = 50;
             for (Block block : blockchain.getChain()) {
                 if (x >= blockX && x <= blockX + 150 &&
@@ -123,14 +117,14 @@ public class BlockchainPanel extends JPanel {
         JPanel detailsPanel = new JPanel();
         detailsPanel.setLayout(new BoxLayout(detailsPanel, BoxLayout.Y_AXIS));
 
-        // Información general del bloque
+        // ingo general del bloque
         detailsPanel.add(new JLabel("Hash: " + block.getHash()));
         detailsPanel.add(new JLabel("Hash Previo: " + block.getPrevHash()));
         detailsPanel.add(new JLabel("Nonce: " + block.getNonce()));
         detailsPanel.add(new JLabel("Timestamp: " +
             dateFormat.format(new Date(String.valueOf(block.getTimestamp())))));
 
-        // Lista de transacciones
+        // lista de transacciones
         JPanel txPanel = new JPanel(new BorderLayout());
         txPanel.setBorder(BorderFactory.createTitledBorder("Transacciones"));
 

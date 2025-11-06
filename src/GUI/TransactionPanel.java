@@ -16,17 +16,17 @@ public class TransactionPanel extends JPanel {
         this.blockchain = blockchain;
         setLayout(new BorderLayout());
 
-        // Panel de estadísticas
+        // estadísticas
         JPanel statsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         statsLabel = new JLabel();
         updateStats();
         statsPanel.add(statsLabel);
         add(statsPanel, BorderLayout.NORTH);
 
-        // Panel de tablas
+        //tablas
         JPanel tablesPanel = new JPanel(new GridLayout(2, 1));
 
-        // Tabla de transacciones pendientes
+        //transacciones pendientes
         String[] columnNames = {"De", "Para", "Monto", "Estado"};
         pendingTable = new JTable(new Object[0][4], columnNames);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
@@ -34,7 +34,7 @@ public class TransactionPanel extends JPanel {
         pendingPanel.add(new JLabel("Transacciones Pendientes"), BorderLayout.NORTH);
         pendingPanel.add(pendingScroll, BorderLayout.CENTER);
 
-        // Tabla de transacciones confirmadas
+        // transacciones confirmadas
         confirmedTable = new JTable(new Object[0][4], columnNames);
         JScrollPane confirmedScroll = new JScrollPane(confirmedTable);
         JPanel confirmedPanel = new JPanel(new BorderLayout());
@@ -46,12 +46,11 @@ public class TransactionPanel extends JPanel {
 
         add(tablesPanel, BorderLayout.CENTER);
 
-        // Botón de actualización
         JButton refreshButton = new JButton("Actualizar");
         refreshButton.addActionListener(e -> updateTables());
         add(refreshButton, BorderLayout.SOUTH);
 
-        // Iniciar actualización periódica
+
         Timer timer = new Timer(5000, e -> updateTables());
         timer.start();
     }
@@ -88,7 +87,7 @@ public class TransactionPanel extends JPanel {
     }
 
     private void updateTables() {
-        // Actualizar tabla de pendientes
+        // actualizo tabla de transacciones pendientes
         List<Transaction> pending = blockchain.pendingTransactions;
         Object[][] pendingData = new Object[pending.size()][4];
         for (int i = 0; i < pending.size(); i++) {
@@ -105,7 +104,7 @@ public class TransactionPanel extends JPanel {
             new String[]{"De", "Para", "Monto", "Estado"}
         ));
 
-        // Actualizar tabla de confirmadas
+        // actualizo tabla de transacciones confirmadas
         List<Transaction> confirmed = blockchain.txPool.getValidTransactions();
         Object[][] confirmedData = new Object[confirmed.size()][4];
         for (int i = 0; i < confirmed.size(); i++) {

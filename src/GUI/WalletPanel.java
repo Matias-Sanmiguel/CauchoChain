@@ -27,35 +27,34 @@ public class WalletPanel extends JPanel {
         this.blockchain = blockchain;
         this.wallets = new ArrayList<>();
 
-        // Inicializar modelos de tabla primero
         String[] walletColumns = {"Dirección", "Alias", "Saldo"};
         String[] txColumns = {"De", "Para", "Monto", "Estado"};
         this.walletsTableModel = new DefaultTableModel(walletColumns, 0);
         this.transactionsTableModel = new DefaultTableModel(txColumns, 0);
 
-        // Inicializar componentes de UI
+
         this.fromWalletCombo = new JComboBox<>();
         this.toWalletCombo = new JComboBox<>();
         this.amountField = new JTextField();
 
-        // Panel izquierdo: Lista de wallets y creación
+        // lista de wallets
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.setBorder(BorderFactory.createTitledBorder("Wallets"));
 
-        // Tabla de wallets
+        // tabla de wallets
         JTable walletsTable = new JTable(walletsTableModel);
         leftPanel.add(new JScrollPane(walletsTable), BorderLayout.CENTER);
 
-        // Botón crear wallet
+        // crear wallet
         JButton createWalletButton = new JButton("Crear Nueva Wallet");
         createWalletButton.addActionListener(e -> createNewWallet());
         leftPanel.add(createWalletButton, BorderLayout.SOUTH);
 
-        // Panel derecho: Transacciones
+        // transacciones
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBorder(BorderFactory.createTitledBorder("Transacciones"));
 
-        // Panel de envío
+        // envío
         JPanel sendPanel = new JPanel(new GridLayout(4, 2, 5, 5));
 
         sendPanel.add(new JLabel("Desde:"));
@@ -70,13 +69,12 @@ public class WalletPanel extends JPanel {
         sendPanel.add(new JLabel(""));
         sendPanel.add(sendButton);
 
-        // Historial de transacciones
+        // historial de transacciones
         JTable txTable = new JTable(transactionsTableModel);
 
         rightPanel.add(sendPanel, BorderLayout.NORTH);
         rightPanel.add(new JScrollPane(txTable), BorderLayout.CENTER);
 
-        // Layout principal
         JSplitPane splitPane = new JSplitPane(
             JSplitPane.HORIZONTAL_SPLIT,
             leftPanel,
@@ -85,30 +83,28 @@ public class WalletPanel extends JPanel {
         splitPane.setDividerLocation(400);
         add(splitPane, BorderLayout.CENTER);
 
-        // Crear algunas wallets de ejemplo y actualizar la UI inicialmente
+        //creo wallets iniciales y mino un bloque
         SwingUtilities.invokeLater(() -> {
-            // Crear primera wallet con fondos iniciales
+            // creo wallet con saldo inicial
             Wallet firstWallet = new Wallet("Wallet-1");
             wallets.add(firstWallet);
 
-            // Crear transacción inicial y minarla
+            // creo transacción inicial y la mino
             Transaction initialTx = new Transaction(null, firstWallet.getAddress(), 50.0f);
             blockchain.createTransaction(initialTx);
 
-            // Minar el bloque inicial
+            // mino el bloque inicial
             Miner initialMiner = new Miner(2.0f, "InitialMiner");
             blockchain.minePendingTransactions(initialMiner);
 
-            // Crear segunda wallet
+            // creo segunda wallet
             Wallet secondWallet = new Wallet("Wallet-2");
             wallets.add(secondWallet);
 
-            // Actualizar la UI
             updateWalletsList();
             updateTransactionsList();
         });
 
-        // Timer para actualización periódica
         Timer timer = new Timer(5000, e -> SwingUtilities.invokeLater(() -> {
             updateWalletsList();
             updateTransactionsList();
@@ -142,7 +138,6 @@ public class WalletPanel extends JPanel {
 
     private void sendTransaction() {
         try {
-            // Obtener los índices seleccionados
             int fromIndex = fromWalletCombo.getSelectedIndex();
             int toIndex = toWalletCombo.getSelectedIndex();
 
@@ -171,7 +166,7 @@ public class WalletPanel extends JPanel {
                 return;
             }
 
-            // Crear y añadir la transacción
+            //creo y añado la transacción
             Transaction tx = fromWallet.createTransaction(toWallet.getAddress(), amount, blockchain);
             blockchain.createTransaction(tx); // Aseguramos que se añada al pool de transacciones
 
@@ -181,7 +176,6 @@ public class WalletPanel extends JPanel {
 
             amountField.setText("");
 
-            // Actualizar inmediatamente la UI
             SwingUtilities.invokeLater(() -> {
                 updateWalletsList();
                 updateTransactionsList();
@@ -201,14 +195,14 @@ public class WalletPanel extends JPanel {
     private void updateTransactionsList() {
         transactionsTableModel.setRowCount(0);
 
-        // Transacciones confirmadas (primero las mostramos porque son más importantes)
+        //transacciones confirmadas
         for (Block block : blockchain.getChain()) {
             for (Transaction tx : block.getTransactions()) {
                 addTransactionToTable(tx, "Confirmada");
             }
         }
 
-        // Transacciones pendientes
+        // transacciones pendientes
         for (Transaction tx : blockchain.pendingTransactions) {
             addTransactionToTable(tx, "Pendiente");
         }
@@ -216,14 +210,14 @@ public class WalletPanel extends JPanel {
 
     private void addTransactionToTable(Transaction tx, String status) {
         Vector<Object> row = new Vector<>();
-        // Para transacciones de recompensa (minería)
+        // para transacciones de mineria (recompensa)
         if (tx.fromAddress == null) {
             row.add("SISTEMA");
             row.add(tx.toAddress); // Dirección del minero
             row.add(tx.amount);
             row.add("Recompensa de minería");
         } else {
-            // Para transacciones normales
+            // para transacciones normales
             row.add(tx.fromAddress);
             row.add(tx.toAddress);
             row.add(tx.amount);
@@ -234,8 +228,8 @@ public class WalletPanel extends JPanel {
 
     private String getAliasForAddress(String address) {
         if (address == null) return "Sistema";
-        return address; // Mostrar la dirección completa
+        //muestro el address de la wallet
+        return address;
     }
 
-    // Las actualizaciones ahora se manejan directamente con updateWalletsList() y updateTransactionsList()
 }

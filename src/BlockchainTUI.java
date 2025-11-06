@@ -26,7 +26,6 @@ public class BlockchainTUI {
         this.logger = Logger.getInstance();
     }
 
-    // ------------------ START / STOP ------------------
     public void start() throws IOException {
         screen = new DefaultTerminalFactory().createScreen();
         screen.startScreen();
@@ -58,7 +57,6 @@ public class BlockchainTUI {
         }
     }
 
-    // ------------------ INPUT HANDLING ------------------
     private void handleInput(KeyStroke key) {
         KeyType type = key.getKeyType();
         Character c = key.getCharacter();
@@ -131,7 +129,6 @@ public class BlockchainTUI {
         else if (mode.equals("wallet")) handleCreateWallet(text);
     }
 
-    // ------------------ TX & MINE ------------------
     private void handleTx(String input) {
         try {
             String[] parts = input.split("\\s+");
@@ -185,14 +182,13 @@ public class BlockchainTUI {
         }).start();
     }
 
-    // ------------------ DRAW ------------------
     private void draw() throws IOException {
         screen.clear();
         TerminalSize size = screen.getTerminalSize();
         int width = size.getColumns();
         int height = size.getRows();
 
-        // Header
+        // titulo
         drawBox(0, 0, width, 3, TextColor.ANSI.CYAN);
         drawCenter(1, "CAUCHOCHAIN TUI - Blockchain Demo", TextColor.ANSI.CYAN);
 
@@ -202,21 +198,21 @@ public class BlockchainTUI {
         int leftCol = 1;
         int rightCol = leftCol + col1Width + 2;
 
-        // Left Panel: Blockchain + Wallets
+        // panel de blockchain y wallets
         drawPanel(leftCol, y, col1Width, 12, "Blockchain", TextColor.ANSI.BLUE);
         drawBlockchainContent(leftCol + 1, y + 2, col1Width - 2);
 
         drawPanel(leftCol, y + 14, col1Width, 12, "Wallets", TextColor.ANSI.MAGENTA);
         drawWalletsContent(leftCol + 1, y + 16, col1Width - 2);
 
-        // Right Panel: Transactions + Status
+        // panel de transacciones y estado
         drawPanel(rightCol, y, col2Width, 12, "Transacciones Pendientes", TextColor.ANSI.YELLOW);
         drawTransactionsContent(rightCol + 1, y + 2, col2Width - 2);
 
         drawPanel(rightCol, y + 14, col2Width, 12, "Estado", TextColor.ANSI.GREEN);
         drawStatusContent(rightCol + 1, y + 16, col2Width - 2);
 
-        // Bottom: Input or Controls & Logs
+        // inputs y logs
         int bottomY = height - 12;
         if (!inputMode.isEmpty()) {
             drawPanel(1, bottomY, width - 2, 5, "Entrada", TextColor.ANSI.WHITE);
