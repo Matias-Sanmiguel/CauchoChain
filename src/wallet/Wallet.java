@@ -49,7 +49,7 @@ public class Wallet extends WalletBase implements IWallet {
 		if (bc == null) {
 			return cachedBalance;
 		}
-		cachedBalance = bc.getBalance(alias);
+		cachedBalance = bc.getBalance(this.getAddress());
 		return cachedBalance;
 	}
     //  Devuelve el balance consultando la cadena (Blockchain) y actualiza cachedBalance.
