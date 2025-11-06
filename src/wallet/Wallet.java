@@ -66,7 +66,7 @@ public class Wallet extends WalletBase implements IWallet {
 			throw new IllegalArgumentException("Fondos insuficientes: " + balance + " solicitados: " + amt);
 		}
 
-		Transaction tx = new Transaction(this.alias, to, amt);
+		Transaction tx = new Transaction(this.getAddress(), to, amt);
 
 
         // firma la transaccion con el keypar de la wallet

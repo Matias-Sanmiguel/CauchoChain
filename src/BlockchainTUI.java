@@ -289,6 +289,7 @@ public class BlockchainTUI {
                             try {
                                 blockchain.minePendingTransactions(activeMiner);
                                 minedBlocksCount++;
+                                updateAllWalletBalances();
                                 logger.info("Bloque minado. TX pendientes ahora: " + blockchain.pendingTransactions.size());
                             } catch (Exception e) {
                                 logger.error("Error en mineria: " + e.getMessage());
@@ -320,6 +321,12 @@ public class BlockchainTUI {
     private void stopMining() {
         isMining = false;
         logger.info("Mineria detenida");
+    }
+
+    private void updateAllWalletBalances() {
+        for (Wallet wallet : wallets.values()) {
+            wallet.getBalance(blockchain);
+        }
     }
 
     private void draw() throws IOException {
