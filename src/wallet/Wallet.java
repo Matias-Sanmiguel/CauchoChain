@@ -87,4 +87,8 @@ public class Wallet extends WalletBase implements IWallet {
 	public float getCachedBalance() {
 		return cachedBalance;
 	}
+
+	public static Wallet createWallet(String alias) {
+		return new Wallet(alias);
+	}
 }

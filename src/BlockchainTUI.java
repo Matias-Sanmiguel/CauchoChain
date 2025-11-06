@@ -85,6 +85,9 @@ public class BlockchainTUI {
             case 'm':
                 openMineInput();
                 break;
+            case 'w':
+                openWalletInput();
+                break;
             case 's':
                 showStats();
                 break;
@@ -111,6 +114,13 @@ public class BlockchainTUI {
         logger.info("Modo MINA activo");
     }
 
+    private void openWalletInput() {
+        inputMode = "wallet";
+        inputPrompt = "Nombre de la wallet (alias):";
+        inputBuffer = "";
+        logger.info("Modo WALLET activo");
+    }
+
     private void processInput() {
         String text = inputBuffer.trim();
         String mode = inputMode;
@@ -118,6 +128,7 @@ public class BlockchainTUI {
 
         if (mode.equals("tx")) handleTx(text);
         else if (mode.equals("mine")) handleMine(text);
+        else if (mode.equals("wallet")) handleCreateWallet(text);
     }
 
     // ------------------ TX & MINE ------------------
@@ -225,7 +236,7 @@ public class BlockchainTUI {
             drawLine(y++, "| > " + padRight(inputBuffer + "_", 44) + "|", TextColor.ANSI.WHITE);
             drawLine(y++, "+--------------------------------------------+", TextColor.ANSI.WHITE);
         } else {
-            drawCenter(y++, "[T]=Tx   [M]=Mine   [S]=Stats   [H]=Help   [Q]=Exit", TextColor.ANSI.GREEN);
+            drawCenter(y++, "[T]=Tx   [M]=Mine   [W]=Wallet   [S]=Stats   [H]=Help   [Q]=Exit", TextColor.ANSI.GREEN);
         }
         y++;
 
@@ -294,9 +305,29 @@ public class BlockchainTUI {
         logger.info("=== AYUDA ===");
         logger.info("[T] Crear TX: FROM TO AMOUNT");
         logger.info("[M] Minar: procesa TX pendientes");
+        logger.info("[W] Crear Wallet: define una nueva wallet");
         logger.info("[S] Ver estadisticas blockchain");
         logger.info("[H] Mostrar esta ayuda");
         logger.info("[Q] Salir de la aplicacion");
         lastState = "";
+    }
+
+    private void handleCreateWallet(String alias) {
+        if (alias.isEmpty()) {
+            logger.error("El alias de la wallet no puede estar vacío.");
+            return;
+        }
+        if (wallets.containsKey(alias)) {
+            logger.error("Ya existe una wallet con ese alias: " + alias);
+            return;
+        }
+
+        try {
+            Wallet newWallet = Wallet.createWallet(alias);
+            addWallet(alias, newWallet);
+            logger.info("Wallet creada: " + alias);
+        } catch (Exception e) {
+            logger.error("Error creando wallet: " + e.getMessage());
+        }
     }
 }
