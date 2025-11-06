@@ -156,6 +156,12 @@ public class Blockchain extends BlockchainCore {
         return difficulty;
     }
 
+    public void setDifficulty(int newDifficulty) {
+        if (newDifficulty > 0) {
+            this.difficulty = newDifficulty;
+        }
+    }
+
     public float getMiningReward() {
         return miningReward;
     }
