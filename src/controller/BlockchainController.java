@@ -20,13 +20,13 @@ public class BlockchainController {
     public BlockchainController(Blockchain blockchain) {
         this.blockchain = blockchain;
         this.mediator = null;
-        this.logger = new Logger();
+        this.logger = Logger.getInstance();
     }
 
     public BlockchainController(Blockchain blockchain, NetworkMediator mediator, Logger logger) {
         this.blockchain = blockchain;
         this.mediator = mediator;
-        this.logger = logger != null ? logger : new Logger();
+        this.logger = logger != null ? logger : Logger.getInstance();
     }
 
     /**
@@ -35,9 +35,9 @@ public class BlockchainController {
     public void initNetwork(){
         if (this.mediator == null) {
             this.mediator = new SimpleNetworkMediator();
-            logger.log("Network initialized with SimpleNetworkMediator");
+            logger.info("Network initialized with SimpleNetworkMediator");
         } else {
-            logger.log("Network already initialized");
+            logger.info("Network already initialized");
         }
     }
 
@@ -48,7 +48,7 @@ public class BlockchainController {
         if (node == null) return;
         if (this.mediator == null) initNetwork();
         mediator.registerNode(node);
-        logger.log("Node added: " + node.getId());
+        logger.info("Node added: " + node.getId());
     }
 
     /**
@@ -58,7 +58,7 @@ public class BlockchainController {
         if (tx == null) return;
         try {
             blockchain.createTransaction(tx);
-            logger.log("New transaction handled: " + tx.calculateHash());
+            logger.info("New transaction handled: " + tx.calculateHash());
             if (mediator != null) {
                 NetworkMessage msg = new NetworkMessage(NetworkMessage.Type.TRANSACTION, tx);
                 mediator.broadcast(msg, "controller");
@@ -84,7 +84,7 @@ public class BlockchainController {
                 NetworkMessage msg = new NetworkMessage(NetworkMessage.Type.BLOCK, latest);
                 String from = (miner instanceof Miner) ? ((Miner) miner).getAddress() : "miner";
                 mediator.broadcast(msg, from);
-                logger.log("Broadcasted new block: " + latest.getHash() + " from " + from);
+                logger.info("Broadcasted new block: " + latest.getHash() + " from " + from);
             }
         } catch (Exception e) {
             logger.log("Mining request failed: " + e.getMessage());
@@ -98,7 +98,7 @@ public class BlockchainController {
         if (sc == null) return;
         try {
             String id = blockchain.deployContract(sc);
-            logger.log("Contract deployed: " + id);
+            logger.info("Contract deployed: " + id);
             if (mediator != null) {
                 NetworkMessage msg = new NetworkMessage(NetworkMessage.Type.CHAIN_RESPONSE, sc);
                 mediator.broadcast(msg, "controller");

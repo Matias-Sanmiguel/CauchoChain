@@ -5,13 +5,14 @@ import com.googlecode.lanterna.terminal.DefaultTerminalFactory;
 import model.*;
 import wallet.*;
 import miner.*;
+import utils.Logger;
 import java.io.IOException;
 import java.util.*;
 
 public class BlockchainTUI {
     private final Blockchain blockchain;
     private final Map<String, Wallet> wallets = new LinkedHashMap<>();
-    private final Queue<String> logs = new LinkedList<>();
+    private final Logger logger;
 
     private Screen screen;
     private volatile boolean running = true;
@@ -22,18 +23,7 @@ public class BlockchainTUI {
 
     public BlockchainTUI(Blockchain blockchain) {
         this.blockchain = blockchain;
-    }
-
-    // ------------------ LOGGING ------------------
-    public void addLog(String msg) {
-        String time = String.format("[%02d:%02d:%02d]",
-                Calendar.getInstance().get(Calendar.HOUR_OF_DAY),
-                Calendar.getInstance().get(Calendar.MINUTE),
-                Calendar.getInstance().get(Calendar.SECOND));
-        synchronized (logs) {
-            logs.add(time + " " + msg);
-            if (logs.size() > 50) logs.poll();
-        }
+        this.logger = Logger.getInstance();
     }
 
     // ------------------ START / STOP ------------------
@@ -42,7 +32,7 @@ public class BlockchainTUI {
         screen.startScreen();
         screen.setCursorPosition(null);
 
-        addLog("TUI iniciada. Usa [T/M/S/H/Q].");
+        logger.info("TUI iniciada. Usa [T/M/S/H/Q].");
 
         while (running) {
             String state = buildStateHash();
@@ -76,7 +66,7 @@ public class BlockchainTUI {
         if (!inputMode.isEmpty()) {
             if (type == KeyType.Escape) {
                 inputMode = ""; inputBuffer = ""; inputPrompt = "";
-                addLog("Operación cancelada");
+                logger.info("Operación cancelada");
             } else if (type == KeyType.Backspace && inputBuffer.length() > 0) {
                 inputBuffer = inputBuffer.substring(0, inputBuffer.length() - 1);
             } else if (type == KeyType.Enter) {
@@ -102,7 +92,7 @@ public class BlockchainTUI {
                 showHelp();
                 break;
             case 'q':
-                addLog("Saliendo...");
+                logger.info("Saliendo de la aplicación");
                 running = false;
                 break;
         }
@@ -111,14 +101,14 @@ public class BlockchainTUI {
     private void openTxInput() {
         inputMode = "tx";
         inputPrompt = "FROM TO AMOUNT (ej: juan pancho 25)";
-        addLog("Modo TX activo.");
+        logger.info("Modo TX activo");
     }
 
     private void openMineInput() {
         inputMode = "mine";
         inputPrompt = "Minero (nombre o alias):";
         inputBuffer = "miner1";
-        addLog("Modo MINA activo.");
+        logger.info("Modo MINA activo");
     }
 
     private void processInput() {
@@ -134,26 +124,31 @@ public class BlockchainTUI {
     private void handleTx(String input) {
         try {
             String[] parts = input.split("\\s+");
-            if (parts.length != 3) { addLog("Formato inválido."); return; }
+            if (parts.length != 3) {
+                logger.error("Formato inválido. Usa: FROM TO AMOUNT");
+                return;
+            }
 
             String from = parts[0], to = parts[1];
             float amount = Float.parseFloat(parts[2]);
 
-            if (!wallets.containsKey(from)) { addLog("Wallet inexistente: " + from); return; }
+            if (!wallets.containsKey(from)) {
+                logger.error("Wallet inexistente: " + from);
+                return;
+            }
             Wallet w = wallets.get(from);
             String toAddr = wallets.containsKey(to) ? wallets.get(to).getAddress() : to;
 
             Transaction tx = w.createTransaction(toAddr, amount, blockchain);
             if (tx != null) {
-                blockchain.addTransactionToPool(tx); // ✅ Solo agrega al pool (sin confirmar)
-                addLog("TX creada: " + from + " → " + to + " (" + amount + ") [PENDIENTE]");
-                addLog("Miná el bloque para confirmarla [M]");
+                blockchain.addTransactionToPool(tx);
+                logger.info("TX creada: " + from + " → " + to + " (" + amount + ") [PENDIENTE]");
             } else {
-                addLog("TX fallida (saldo insuficiente?)");
+                logger.error("TX fallida (saldo insuficiente?)");
             }
 
         } catch (Exception e) {
-            addLog("Error TX: " + e.getMessage());
+            logger.error("Error TX: " + e.getMessage());
         }
     }
 
@@ -162,9 +157,8 @@ public class BlockchainTUI {
         final String m = miner;
 
         new Thread(() -> {
-            addLog("⛏️  Minando bloque...");
+            logger.info("⛏️ Minador iniciando...");
             try {
-                // Mover TX del pool a pendientes antes de minar
                 List<Transaction> txFromPool = new ArrayList<>(blockchain.txPool.getPending());
                 for (Transaction tx : txFromPool) {
                     if (!blockchain.pendingTransactions.contains(tx)) {
@@ -174,9 +168,8 @@ public class BlockchainTUI {
 
                 Miner minerObj = new Miner(1.0f, m);
                 minerObj.mine(blockchain);
-                addLog("✅ Bloque minado por " + m);
             } catch (Exception e) {
-                addLog("❌ Error: " + e.getMessage());
+                logger.error("Error minando: " + e.getMessage());
             }
         }).start();
     }
@@ -238,9 +231,8 @@ public class BlockchainTUI {
 
         // Logs
         drawSection(y++, "Logs", TextColor.ANSI.CYAN);
-        List<String> copy;
-        synchronized (logs) { copy = new ArrayList<>(logs); }
-        for (String l : copy.subList(Math.max(0, copy.size() - 5), copy.size()))
+        List<String> logs = logger.getLastLogs(5);
+        for (String l : logs)
             drawLine(y++, " " + truncate(l, 55), TextColor.ANSI.WHITE);
 
         screen.refresh();
@@ -279,31 +271,32 @@ public class BlockchainTUI {
         for (Wallet w : wallets.values()) sb.append(blockchain.getBalance(w.getAddress())).append(",");
         sb.append("|").append(blockchain.txPool.getPending().size());
         sb.append("|").append(inputMode).append("|").append(inputBuffer);
+        sb.append("|").append(logger.getLogs().size());
         return sb.toString();
     }
 
     // ------------------ WALLET MGMT ------------------
     public void addWallet(String alias, Wallet w) {
         wallets.put(alias, w);
-        addLog("Wallet añadida: " + alias);
+        logger.info("Wallet añadida: " + alias);
     }
 
     private void showStats() {
-        addLog("=== ESTADISTICAS ===");
-        addLog("Bloques: " + blockchain.getChain().size());
-        addLog("TX pendientes: " + blockchain.txPool.getPending().size());
-        addLog("Dificultad: " + blockchain.getDifficulty());
-        addLog("Recompensa: " + blockchain.getMiningReward());
-        lastState = ""; // ✅ Fuerza redibujado
+        logger.info("=== ESTADISTICAS ===");
+        logger.info("Bloques: " + blockchain.getChain().size());
+        logger.info("TX pendientes: " + blockchain.txPool.getPending().size());
+        logger.info("Dificultad: " + blockchain.getDifficulty());
+        logger.info("Recompensa: " + blockchain.getMiningReward());
+        lastState = "";
     }
 
     private void showHelp() {
-        addLog("=== AYUDA ===");
-        addLog("[T] Crear TX: FROM TO AMOUNT");
-        addLog("[M] Minar: procesa TX pendientes");
-        addLog("[S] Ver estadisticas blockchain");
-        addLog("[H] Mostrar esta ayuda");
-        addLog("[Q] Salir de la aplicacion");
-        lastState = ""; // ✅ Fuerza redibujado
+        logger.info("=== AYUDA ===");
+        logger.info("[T] Crear TX: FROM TO AMOUNT");
+        logger.info("[M] Minar: procesa TX pendientes");
+        logger.info("[S] Ver estadisticas blockchain");
+        logger.info("[H] Mostrar esta ayuda");
+        logger.info("[Q] Salir de la aplicacion");
+        lastState = "";
     }
 }

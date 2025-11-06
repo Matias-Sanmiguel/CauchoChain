@@ -2,34 +2,32 @@ import java.io.IOException;
 import model.*;
 import wallet.*;
 import miner.*;
+import utils.Logger;
 
 public class BlockchainTUIDemo {
     public static void main(String[] args) {
         try {
-            // Crear blockchain y TUI
+            Logger logger = Logger.getInstance();
+
             Blockchain bc = new Blockchain();
             BlockchainTUI tui = new BlockchainTUI(bc);
 
-            // Crear wallets
             Wallet juan = new Wallet("juan");
             Wallet pancho = new Wallet("pancho");
             Wallet maria = new Wallet("maria");
 
-            // Registrar wallets en la TUI
             tui.addWallet("juan", juan);
             tui.addWallet("pancho", pancho);
             tui.addWallet("maria", maria);
 
-            tui.addLog("Sistema iniciado. Preparando blockchain...");
+            logger.info("Sistema iniciado. Preparando blockchain...");
 
-            // Dar recompensa inicial a juan
             Transaction genesisReward = new Transaction(null, juan.getAddress(), 100.0f);
             bc.pendingTransactions.add(genesisReward);
             bc.txPool.addTransaction(genesisReward);
 
-            tui.addLog("Presiona [Minar] para minar el bloque génesis");
+            logger.info("Presiona [M] para minar el bloque génesis");
 
-            // Iniciar TUI (bloqueante)
             tui.start();
 
         } catch (IOException e) {
