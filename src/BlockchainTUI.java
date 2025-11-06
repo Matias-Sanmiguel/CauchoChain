@@ -7,12 +7,14 @@ import wallet.*;
 import miner.*;
 import utils.Logger;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class BlockchainTUI {
     private final Blockchain blockchain;
     private final Map<String, Wallet> wallets = new LinkedHashMap<>();
     private final Logger logger;
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 
     private Screen screen;
     private volatile boolean running = true;
@@ -21,18 +23,26 @@ public class BlockchainTUI {
     private String inputPrompt = "";
     private String lastState = "";
 
+    private int currentTab = 0; // 0=Blockchain, 1=Wallets, 2=Mining, 3=Config, 4=Transactions
+    private final String[] TAB_NAMES = {"Blockchain", "Wallets", "Mineria", "Config", "Transacciones"};
+
+    private boolean isMining = false;
+    private Miner activeMiner;
+    private int minedBlocksCount = 0;
+
     public BlockchainTUI(Blockchain blockchain) {
         this.blockchain = blockchain;
         this.logger = Logger.getInstance();
     }
 
-    // ------------------ START / STOP ------------------
+    // ==================== START / STOP ====================
     public void start() throws IOException {
         screen = new DefaultTerminalFactory().createScreen();
         screen.startScreen();
         screen.setCursorPosition(null);
 
-        logger.info("TUI iniciada. Usa [T/M/S/H/Q].");
+        logger.info("TUI iniciada. Presiona [H] para ayuda.");
+        initializeWallets();
 
         while (running) {
             String state = buildStateHash();
@@ -52,73 +62,97 @@ public class BlockchainTUI {
 
     public void stop() throws IOException {
         running = false;
+        isMining = false;
         if (screen != null) {
             screen.stopScreen();
             screen.close();
         }
     }
 
-    // ------------------ INPUT HANDLING ------------------
+    // ==================== INITIALIZATION ====================
+    private void initializeWallets() {
+        try {
+            Wallet wallet1 = new Wallet("Wallet-1");
+            wallets.put("Wallet-1", wallet1);
+
+            Transaction initialTx = new Transaction(null, wallet1.getAddress(), 50.0f);
+            blockchain.createTransaction(initialTx);
+
+            Miner initialMiner = new Miner(2.0f, "InitialMiner");
+            blockchain.minePendingTransactions(initialMiner);
+            minedBlocksCount++;
+
+            Wallet wallet2 = new Wallet("Wallet-2");
+            wallets.put("Wallet-2", wallet2);
+
+            logger.info("Wallets iniciales creadas");
+        } catch (Exception e) {
+            logger.error("Error inicializando wallets: " + e.getMessage());
+        }
+    }
+
+    // ==================== INPUT HANDLING ====================
     private void handleInput(KeyStroke key) {
         KeyType type = key.getKeyType();
         Character c = key.getCharacter();
 
         if (!inputMode.isEmpty()) {
-            if (type == KeyType.Escape) {
-                inputMode = ""; inputBuffer = ""; inputPrompt = "";
-                logger.info("Operación cancelada");
-            } else if (type == KeyType.Backspace && inputBuffer.length() > 0) {
-                inputBuffer = inputBuffer.substring(0, inputBuffer.length() - 1);
-            } else if (type == KeyType.Enter) {
-                processInput();
-            } else if (c != null && c >= 32 && c < 127) {
-                inputBuffer += c;
-            }
+            handleInputMode(type, c);
             return;
         }
 
-        if (c == null) return;
+        if (c == null) {
+            if (type == KeyType.ArrowLeft) currentTab = Math.max(0, currentTab - 1);
+            if (type == KeyType.ArrowRight) currentTab = Math.min(4, currentTab + 1);
+            return;
+        }
+
         switch (Character.toLowerCase(c)) {
-            case 't':
-                openTxInput();
-                break;
-            case 'm':
-                openMineInput();
-                break;
-            case 'w':
-                openWalletInput();
-                break;
-            case 's':
-                showStats();
-                break;
-            case 'h':
-                showHelp();
-                break;
-            case 'q':
-                logger.info("Saliendo de la aplicación");
-                running = false;
-                break;
+            case '1': currentTab = 0; break;
+            case '2': currentTab = 1; break;
+            case '3': currentTab = 2; break;
+            case '4': currentTab = 3; break;
+            case '5': currentTab = 4; break;
+            case 't': openTxInput(); break;
+            case 'w': openWalletInput(); break;
+            case 'm': toggleMining(); break;
+            case 's': showStats(); break;
+            case 'c': openConfigInput(); break;
+            case 'h': showHelp(); break;
+            case 'q': running = false; logger.info("Saliendo..."); break;
         }
     }
 
-    private void openTxInput() {
-        inputMode = "tx";
-        inputPrompt = "FROM TO AMOUNT (ej: juan pancho 25)";
-        logger.info("Modo TX activo");
+    private void handleInputMode(KeyType type, Character c) {
+        if (type == KeyType.Escape) {
+            inputMode = ""; inputBuffer = ""; inputPrompt = "";
+            logger.info("Operacion cancelada");
+        } else if (type == KeyType.Backspace && inputBuffer.length() > 0) {
+            inputBuffer = inputBuffer.substring(0, inputBuffer.length() - 1);
+        } else if (type == KeyType.Enter) {
+            processInput();
+        } else if (c != null && c >= 32 && c < 127) {
+            inputBuffer += c;
+        }
     }
 
-    private void openMineInput() {
-        inputMode = "mine";
-        inputPrompt = "Minero (nombre o alias):";
-        inputBuffer = "miner1";
-        logger.info("Modo MINA activo");
+    // ==================== INPUT MODES ====================
+    private void openTxInput() {
+        inputMode = "tx";
+        inputPrompt = "FROM TO AMOUNT (ej: Wallet-1 Wallet-2 10.5)";
+        inputBuffer = "";
     }
 
     private void openWalletInput() {
         inputMode = "wallet";
-        inputPrompt = "Nombre de la wallet (alias):";
+        inputPrompt = "Nombre de la wallet (ej: MiWallet):";
         inputBuffer = "";
-        logger.info("Modo WALLET activo");
+    }
+
+    private void openConfigInput() {
+        inputMode = "config";
+        inputPrompt = "DIFICULTAD RECOMPENSA (ej: 4 50.0):";
+        inputBuffer = blockchain.getDifficulty() + " " + blockchain.getMiningReward();
     }
 
     private void processInput() {
@@ -127,16 +161,16 @@ public class BlockchainTUI {
         inputMode = ""; inputBuffer = ""; inputPrompt = "";
 
         if (mode.equals("tx")) handleTx(text);
-        else if (mode.equals("mine")) handleMine(text);
         else if (mode.equals("wallet")) handleCreateWallet(text);
+        else if (mode.equals("config")) handleConfig(text);
     }
 
-    // ------------------ TX & MINE ------------------
+    // ==================== TRANSACTION HANDLING ====================
     private void handleTx(String input) {
         try {
             String[] parts = input.split("\\s+");
             if (parts.length != 3) {
-                logger.error("Formato inválido. Usa: FROM TO AMOUNT");
+                logger.error("Formato invalido. Usa: FROM TO AMOUNT");
                 return;
             }
 
@@ -144,113 +178,361 @@ public class BlockchainTUI {
             float amount = Float.parseFloat(parts[2]);
 
             if (!wallets.containsKey(from)) {
-                logger.error("Wallet inexistente: " + from);
+                logger.error("Wallet origen no existe: " + from);
                 return;
             }
-            Wallet w = wallets.get(from);
-            String toAddr = wallets.containsKey(to) ? wallets.get(to).getAddress() : to;
 
-            Transaction tx = w.createTransaction(toAddr, amount, blockchain);
-            if (tx != null) {
-                blockchain.addTransactionToPool(tx);
-                logger.info("TX creada: " + from + " → " + to + " (" + amount + ") [PENDIENTE]");
-            } else {
-                logger.error("TX fallida (saldo insuficiente?)");
-            }
+            Wallet fromWallet = wallets.get(from);
+            String toAddress = wallets.containsKey(to) ? wallets.get(to).getAddress() : to;
 
+            Transaction tx = fromWallet.createTransaction(toAddress, amount, blockchain);
+            blockchain.createTransaction(tx);
+
+            logger.info("TX creada: " + from + " -> " + to + " (" + amount + ")");
+        } catch (NumberFormatException e) {
+            logger.error("Monto invalido: " + e.getMessage());
         } catch (Exception e) {
-            logger.error("Error TX: " + e.getMessage());
+            logger.error("Error en TX: " + e.getMessage());
         }
     }
 
-    private void handleMine(String miner) {
-        if (miner.isEmpty()) miner = "miner1";
-        final String m = miner;
+    private void handleCreateWallet(String alias) {
+        if (alias.isEmpty()) {
+            logger.error("El alias no puede estar vacio");
+            return;
+        }
+        if (wallets.containsKey(alias)) {
+            logger.error("Wallet ya existe: " + alias);
+            return;
+        }
 
-        new Thread(() -> {
-            logger.info("Minador iniciando...");
-            try {
-                List<Transaction> txFromPool = new ArrayList<>(blockchain.txPool.getPending());
-                for (Transaction tx : txFromPool) {
-                    if (!blockchain.pendingTransactions.contains(tx)) {
-                        blockchain.pendingTransactions.add(tx);
+        try {
+            Wallet newWallet = new Wallet(alias);
+            wallets.put(alias, newWallet);
+            logger.info("Wallet creada: " + alias);
+        } catch (Exception e) {
+            logger.error("Error creando wallet: " + e.getMessage());
+        }
+    }
+
+    private void handleConfig(String input) {
+        try {
+            String[] parts = input.split("\\s+");
+            if (parts.length != 2) {
+                logger.error("Formato: DIFICULTAD RECOMPENSA");
+                return;
+            }
+
+            int difficulty = Integer.parseInt(parts[0]);
+            float reward = Float.parseFloat(parts[1]);
+
+            blockchain.setDifficulty(difficulty);
+            blockchain.setMiningReward(reward);
+
+            logger.info("Configuracion actualizada: Dif=" + difficulty + ", Reward=" + reward);
+        } catch (Exception e) {
+            logger.error("Error en configuracion: " + e.getMessage());
+        }
+    }
+
+    // ==================== MINING ====================
+    private void toggleMining() {
+        if (!isMining) {
+            startMining();
+        } else {
+            stopMining();
+        }
+    }
+
+    private void startMining() {
+        if (isMining) return;
+
+        isMining = true;
+        try {
+            activeMiner = new Miner(2.0f, "TUI_Miner_" + System.currentTimeMillis());
+            logger.info("Mineria iniciada con: " + activeMiner.getAddress());
+
+            Thread miningThread = new Thread(() -> {
+                while (isMining && running) {
+                    try {
+                        if (!blockchain.pendingTransactions.isEmpty()) {
+                            try {
+                                blockchain.minePendingTransactions(activeMiner);
+                                minedBlocksCount++;
+                                logger.info("Bloque minado. TX pendientes ahora: " + blockchain.pendingTransactions.size());
+                            } catch (Exception e) {
+                                logger.error("Error en mineria: " + e.getMessage());
+                                e.printStackTrace();
+                            }
+                        } else {
+                            Thread.sleep(100);
+                        }
+                    } catch (InterruptedException ex) {
+                        logger.info("Thread de mineria interrumpido");
+                        break;
+                    } catch (Exception ex) {
+                        logger.error("Error en thread de mineria: " + ex.getMessage());
+                        ex.printStackTrace();
                     }
                 }
+                logger.info("Thread de mineria terminado");
+            }, "MiningThread");
 
-                Miner minerObj = new Miner(1.0f, m);
-                minerObj.mine(blockchain);
-            } catch (Exception e) {
-                logger.error("Error minando: " + e.getMessage());
-            }
-        }).start();
+            miningThread.setDaemon(false);
+            miningThread.start();
+
+        } catch (Exception e) {
+            logger.error("Error iniciando mineria: " + e.getMessage());
+            isMining = false;
+        }
     }
 
-    // ------------------ DRAW ------------------
+    private void stopMining() {
+        isMining = false;
+        logger.info("Mineria detenida");
+    }
+
+    // ==================== DRAWING ====================
     private void draw() throws IOException {
-        screen.clear();
-        TerminalSize size = screen.getTerminalSize();
-        int width = size.getColumns();
-        int height = size.getRows();
+        try {
+            screen.clear();
+            TerminalSize size = screen.getTerminalSize();
+            if (size == null) return;
 
-        // Header
+            int width = Math.max(40, size.getColumns());
+            int height = Math.max(20, size.getRows());
+
+            drawHeader(width, height);
+            drawTabs(width);
+
+            // Si estamos en modo input, dibujar input prominentemente
+            if (!inputMode.isEmpty()) {
+                int inputHeight = 8;
+                int inputY = Math.max(5, (height - inputHeight) / 2);
+                drawInputPanel(1, inputY, Math.max(40, width - 2), inputHeight);
+            } else {
+                // Modo normal: dibujar contenido
+                int contentStartY = 5;
+                int contentHeight = Math.max(5, height - contentStartY - 14);
+
+                try {
+                    switch (currentTab) {
+                        case 0: drawBlockchainTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 1: drawWalletsTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 2: drawMiningTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 3: drawConfigTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 4: drawTransactionsTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                    }
+                } catch (Exception e) {
+                    logger.error("Error dibujando tab: " + e.getMessage());
+                }
+
+                int footerY = contentStartY + contentHeight + 1;
+                int logsY = footerY + 6;
+
+                drawFooter(1, footerY, Math.max(20, width - 2));
+                drawLogs(1, logsY, Math.max(20, width - 2), Math.max(3, height - logsY - 1));
+            }
+
+            screen.refresh();
+        } catch (Exception ex) {
+            logger.error("Error en draw: " + ex.getMessage());
+        }
+    }
+
+    private void drawInputPanel(int x, int y, int width, int height) {
+        try {
+            drawPanel(x, y, width, height, "ENTRADA DE DATOS", TextColor.ANSI.YELLOW);
+
+            // Linea 1: Instruccion del input
+            String instructionLine = "Modo: " + inputMode.toUpperCase();
+            drawLineAt(x + 2, y + 2, instructionLine, TextColor.ANSI.MAGENTA);
+
+            // Linea 2: El prompt
+            drawLineAt(x + 2, y + 3, "-> " + inputPrompt, TextColor.ANSI.YELLOW);
+
+            // Linea 4: El input del usuario con cursor parpadeante
+            String inputLine = "> " + inputBuffer + "_";
+            drawLineAt(x + 2, y + 4, inputLine, TextColor.ANSI.GREEN);
+
+            // Linea 5: Instrucciones de control
+            String controlLine = "[ENTER] Confirmar  |  [ESC] Cancelar  |  [BACKSPACE] Borrar";
+            drawLineAt(x + 2, y + 5, controlLine, TextColor.ANSI.CYAN);
+
+            // Linea 6: Informacion adicional
+            String infoLine = "Caracteres: " + inputBuffer.length();
+            drawLineAt(x + 2, y + 6, infoLine, TextColor.ANSI.WHITE);
+        } catch (Exception ex) {
+            logger.error("Error dibujando panel de input: " + ex.getMessage());
+        }
+    }
+
+    private void drawHeader(int width, int height) throws IOException {
         drawBox(0, 0, width, 3, TextColor.ANSI.CYAN);
-        drawCenter(1, "CAUCHOCHAIN TUI - Blockchain Demo", TextColor.ANSI.CYAN);
+        drawCenter(1, "═══ CAUCHOCHAIN TUI ═══", TextColor.ANSI.CYAN);
+    }
 
-        int y = 4;
-        int col1Width = width / 2 - 2;
-        int col2Width = width / 2 - 2;
-        int leftCol = 1;
-        int rightCol = leftCol + col1Width + 2;
+    private void drawTabs(int width) throws IOException {
+        String tabs = "  [1]Blockchain  [2]Wallets  [3]Mineria  [4]Config  [5]Transacciones  ";
+        int activeX = 1;
+        for (int i = 0; i < TAB_NAMES.length; i++) {
+            String tabLabel = "[" + (i+1) + "]" + TAB_NAMES[i];
+            TextColor color = (i == currentTab) ? TextColor.ANSI.WHITE : TextColor.ANSI.BLUE;
+            drawLineAt(activeX, 4, tabLabel, color);
+            activeX += tabLabel.length() + 2;
+        }
+    }
 
-        // Left Panel: Blockchain + Wallets
-        drawPanel(leftCol, y, col1Width, 12, "Blockchain", TextColor.ANSI.BLUE);
-        drawBlockchainContent(leftCol + 1, y + 2, col1Width - 2);
+    private void drawBlockchainTab(int x, int y, int width, int height) throws IOException {
+        drawPanel(x, y, width, height, "Cadena de Bloques", TextColor.ANSI.BLUE);
 
-        drawPanel(leftCol, y + 14, col1Width, 12, "Wallets", TextColor.ANSI.MAGENTA);
-        drawWalletsContent(leftCol + 1, y + 16, col1Width - 2);
+        List<Block> blocks = blockchain.getChain();
+        int maxRows = height - 3;
+        int startIdx = Math.max(0, blocks.size() - maxRows);
 
-        // Right Panel: Transactions + Status
-        drawPanel(rightCol, y, col2Width, 12, "Transacciones Pendientes", TextColor.ANSI.YELLOW);
-        drawTransactionsContent(rightCol + 1, y + 2, col2Width - 2);
+        drawLineAt(x + 2, y + 2, "Indice | Hash", TextColor.ANSI.CYAN);
+        drawLineAt(x + 2, y + 3, "————————————————────────────────────────", TextColor.ANSI.CYAN);
 
-        drawPanel(rightCol, y + 14, col2Width, 12, "Estado", TextColor.ANSI.GREEN);
-        drawStatusContent(rightCol + 1, y + 16, col2Width - 2);
+        for (int i = startIdx; i < blocks.size(); i++) {
+            Block b = blocks.get(i);
+            String line = String.format("%4d   | %s", b.getIndex(), truncate(b.getHash(), width - 15));
+            drawLineAt(x + 2, y + 4 + (i - startIdx), line, TextColor.ANSI.WHITE);
+        }
+    }
 
-        // Bottom: Input or Controls & Logs
-        int bottomY = height - 12;
-        if (!inputMode.isEmpty()) {
-            drawPanel(1, bottomY, width - 2, 5, "Entrada", TextColor.ANSI.WHITE);
-            drawLine(bottomY + 2, 2, "-> " + inputPrompt, TextColor.ANSI.YELLOW);
-            drawLine(bottomY + 3, 4, "> " + inputBuffer + "_", TextColor.ANSI.WHITE);
-            drawLine(bottomY + 4, 2, "(ESC=Cancelar, ENTER=Confirmar)", TextColor.ANSI.CYAN);
-        } else {
-            drawPanel(1, bottomY, width - 2, 5, "Controles", TextColor.ANSI.GREEN);
-            drawCenter(bottomY + 2, "[T]=Transaccion  [M]=Minar  [W]=Wallet  [S]=Stats  [H]=Ayuda  [Q]=Salir", TextColor.ANSI.GREEN);
+    private void drawWalletsTab(int x, int y, int width, int height) throws IOException {
+        drawPanel(x, y, width / 2 - 1, height, "Wallets", TextColor.ANSI.MAGENTA);
+        drawPanel(x + width / 2 + 1, y, width / 2 - 1, height, "Informacion", TextColor.ANSI.GREEN);
+
+        // Left: Wallets list
+        drawLineAt(x + 2, y + 2, "Alias", TextColor.ANSI.MAGENTA);
+        int rowCount = 0;
+        for (String alias : wallets.keySet()) {
+            if (rowCount >= height - 5) break;
+            drawLineAt(x + 2, y + 3 + rowCount, "• " + alias, TextColor.ANSI.WHITE);
+            rowCount++;
         }
 
-        // Logs Panel
-        int logsPanelHeight = height - bottomY - 7;
-        drawPanel(1, bottomY + 6, width - 2, logsPanelHeight, "Logs", TextColor.ANSI.CYAN);
-        drawLogsContent(3, bottomY + 8, width - 4, logsPanelHeight - 3);
+        // Right: Wallet balances
+        int rightX = x + width / 2 + 3;
+        drawLineAt(rightX, y + 2, "Alias          Balance", TextColor.ANSI.GREEN);
+        drawLineAt(rightX, y + 3, "──────────────────────", TextColor.ANSI.GREEN);
 
-        screen.refresh();
+        rowCount = 0;
+        for (Map.Entry<String, Wallet> e : wallets.entrySet()) {
+            if (rowCount >= height - 5) break;
+            float balance = blockchain.getBalance(e.getValue().getAddress());
+            String line = String.format("%-14s %10.2f", e.getKey(), balance);
+            drawLineAt(rightX, y + 4 + rowCount, line, TextColor.ANSI.WHITE);
+            rowCount++;
+        }
     }
 
+    private void drawMiningTab(int x, int y, int width, int height) throws IOException {
+        drawPanel(x, y, width, height, "Control de Mineria", TextColor.ANSI.YELLOW);
+
+        String miningStatus = isMining ? "EN PROGRESO ▓▓▓" : "DETENIDO";
+        TextColor statusColor = isMining ? TextColor.ANSI.GREEN : TextColor.ANSI.RED;
+
+        drawLineAt(x + 2, y + 2, "Estado: " + miningStatus, statusColor);
+        drawLineAt(x + 2, y + 3, "Bloques minados: " + minedBlocksCount, TextColor.ANSI.CYAN);
+
+        if (activeMiner != null) {
+            String minerAddr = truncate(activeMiner.getAddress(), 30);
+            drawLineAt(x + 2, y + 4, "Minero: " + minerAddr, TextColor.ANSI.WHITE);
+            drawLineAt(x + 2, y + 5, "Recompensa total: " + String.format("%.2f", activeMiner.getTotalMined()), TextColor.ANSI.WHITE);
+        } else {
+            drawLineAt(x + 2, y + 4, "Minero: No iniciado", TextColor.ANSI.WHITE);
+            drawLineAt(x + 2, y + 5, "Recompensa total: 0.00", TextColor.ANSI.WHITE);
+        }
+
+        drawLineAt(x + 2, y + 7, "TX Pendientes: " + blockchain.pendingTransactions.size(), TextColor.ANSI.MAGENTA);
+        drawLineAt(x + 2, y + 8, "Dificultad: " + blockchain.getDifficulty(), TextColor.ANSI.MAGENTA);
+        drawLineAt(x + 2, y + 9, "Recompensa por bloque: " + blockchain.getMiningReward(), TextColor.ANSI.MAGENTA);
+
+        drawLineAt(x + 2, y + height - 3, "Presiona [M] para " + (isMining ? "PAUSAR" : "INICIAR"), TextColor.ANSI.YELLOW);
+    }
+
+    private void drawConfigTab(int x, int y, int width, int height) throws IOException {
+        drawPanel(x, y, width, height, "Configuracion", TextColor.ANSI.GREEN);
+
+        drawLineAt(x + 2, y + 2, "Parametros de Blockchain", TextColor.ANSI.GREEN);
+        drawLineAt(x + 2, y + 3, "─────────────────────────", TextColor.ANSI.GREEN);
+
+        drawLineAt(x + 2, y + 5, "Dificultad (PoW): " + blockchain.getDifficulty(), TextColor.ANSI.WHITE);
+        drawLineAt(x + 2, y + 6, "Recompensa por bloque: " + blockchain.getMiningReward(), TextColor.ANSI.WHITE);
+        drawLineAt(x + 2, y + 7, "Bloques en cadena: " + blockchain.getChain().size(), TextColor.ANSI.WHITE);
+        drawLineAt(x + 2, y + 8, "Wallets activas: " + wallets.size(), TextColor.ANSI.WHITE);
+
+        drawLineAt(x + 2, y + 10, "Cadena valida: " + (blockchain.isChainValid() ? "SI ✓" : "NO ✗"),
+                blockchain.isChainValid() ? TextColor.ANSI.GREEN : TextColor.ANSI.RED);
+
+        drawLineAt(x + 2, y + height - 3, "Presiona [C] para editar", TextColor.ANSI.YELLOW);
+    }
+
+    private void drawTransactionsTab(int x, int y, int width, int height) throws IOException {
+        int leftWidth = width / 2 - 1;
+        int rightWidth = width / 2 - 1;
+
+        drawPanel(x, y, leftWidth, height, "Transacciones Confirmadas", TextColor.ANSI.BLUE);
+        drawPanel(x + leftWidth + 2, y, rightWidth, height, "Transacciones Pendientes", TextColor.ANSI.YELLOW);
+
+        // Confirmed
+        drawLineAt(x + 2, y + 2, "De           Para         Monto", TextColor.ANSI.BLUE);
+        int rowCount = 0;
+        for (Block block : blockchain.getChain()) {
+            for (Transaction tx : block.getTransactions()) {
+                if (rowCount >= height - 5) break;
+                String from = tx.fromAddress == null ? "SISTEMA" : truncate(tx.fromAddress, 8);
+                String to = truncate(tx.toAddress, 8);
+                String line = String.format("%-12s %-12s %8.2f", from, to, tx.amount);
+                drawLineAt(x + 2, y + 3 + rowCount, line, TextColor.ANSI.WHITE);
+                rowCount++;
+            }
+            if (rowCount >= height - 5) break;
+        }
+
+        // Pending
+        drawLineAt(x + leftWidth + 4, y + 2, "De           Para         Monto", TextColor.ANSI.YELLOW);
+        rowCount = 0;
+        for (Transaction tx : blockchain.pendingTransactions) {
+            if (rowCount >= height - 5) break;
+            String from = tx.fromAddress == null ? "SISTEMA" : truncate(tx.fromAddress, 8);
+            String to = truncate(tx.toAddress, 8);
+            String line = String.format("%-12s %-12s %8.2f", from, to, tx.amount);
+            drawLineAt(x + leftWidth + 4, y + 3 + rowCount, line, TextColor.ANSI.WHITE);
+            rowCount++;
+        }
+    }
+
+    private void drawFooter(int x, int y, int width) throws IOException {
+        drawPanel(x, y, width, 6, "Controles", TextColor.ANSI.GREEN);
+        drawLineAt(x + 2, y + 2, "[T]=Transaccion  [W]=Wallet  [M]=Minar  [C]=Config", TextColor.ANSI.GREEN);
+        drawLineAt(x + 2, y + 3, "[S]=Stats  [H]=Ayuda  [Q]=Salir  [←→]=Navegar", TextColor.ANSI.GREEN);
+    }
+
+    private void drawLogs(int x, int y, int width, int height) throws IOException {
+        drawPanel(x, y, width, height, "Logs", TextColor.ANSI.CYAN);
+
+        List<String> logs = logger.getLastLogs(height - 2);
+        int idx = 0;
+        for (String log : logs) {
+            if (idx >= height - 2) break;
+            drawLineAt(x + 2, y + 1 + idx, truncate(log, width - 4), TextColor.ANSI.CYAN);
+            idx++;
+        }
+    }
+
+    // ==================== UI HELPERS ====================
     private void drawBox(int x, int y, int width, int height, TextColor color) throws IOException {
-        // Top border
         for (int i = 0; i < width; i++) {
             screen.setCharacter(x + i, y, new TextCharacter('═', color, TextColor.ANSI.BLACK));
-        }
-        // Bottom border
-        for (int i = 0; i < width; i++) {
             screen.setCharacter(x + i, y + height - 1, new TextCharacter('═', color, TextColor.ANSI.BLACK));
         }
-        // Left & Right borders
         for (int i = 1; i < height - 1; i++) {
             screen.setCharacter(x, y + i, new TextCharacter('║', color, TextColor.ANSI.BLACK));
             screen.setCharacter(x + width - 1, y + i, new TextCharacter('║', color, TextColor.ANSI.BLACK));
         }
-        // Corners
         screen.setCharacter(x, y, new TextCharacter('╔', color, TextColor.ANSI.BLACK));
         screen.setCharacter(x + width - 1, y, new TextCharacter('╗', color, TextColor.ANSI.BLACK));
         screen.setCharacter(x, y + height - 1, new TextCharacter('╚', color, TextColor.ANSI.BLACK));
@@ -260,80 +542,8 @@ public class BlockchainTUI {
     private void drawPanel(int x, int y, int width, int height, String title, TextColor color) throws IOException {
         drawBox(x, y, width, height, color);
         String titleStr = " " + title + " ";
-        int titleX = x + (width - titleStr.length()) / 2;
+        int titleX = x + 2;
         drawLineAt(titleX, y, titleStr, color);
-    }
-
-    private void drawBlockchainContent(int x, int y, int width) throws IOException {
-        List<Block> blocks = blockchain.getChain();
-        int maxRows = 9;
-        int start = Math.max(0, blocks.size() - maxRows);
-
-        for (int i = start; i < blocks.size(); i++) {
-            Block b = blocks.get(i);
-            String line = String.format("Block #%d: %s", b.getIndex(), truncate(b.getHash(), width - 12));
-            drawLine(y + (i - start), x, line, TextColor.ANSI.CYAN);
-        }
-
-        if (blocks.isEmpty()) {
-            drawLine(y + 1, x, "Sin bloques aún...", TextColor.ANSI.WHITE);
-        }
-    }
-
-    private void drawWalletsContent(int x, int y, int width) throws IOException {
-        drawLine(y, x, "Alias          Balance", TextColor.ANSI.MAGENTA);
-        drawLine(y + 1, x, "────────────────────────", TextColor.ANSI.MAGENTA);
-
-        int idx = 0;
-        for (var e : wallets.entrySet()) {
-            if (idx >= 8) break;
-            float bal = blockchain.getBalance(e.getValue().getAddress());
-            String line = String.format("%-14s %10.2f", e.getKey(), bal);
-            drawLine(y + 2 + idx, x, line, TextColor.ANSI.WHITE);
-            idx++;
-        }
-
-        if (wallets.isEmpty()) {
-            drawLine(y + 3, x, "Sin wallets...", TextColor.ANSI.WHITE);
-        }
-    }
-
-    private void drawTransactionsContent(int x, int y, int width) throws IOException {
-        List<Transaction> pending = blockchain.txPool.getPending();
-        drawLine(y, x, "From      To        Monto", TextColor.ANSI.YELLOW);
-        drawLine(y + 1, x, "─────────────────────────", TextColor.ANSI.YELLOW);
-
-        int idx = 0;
-        for (Transaction t : pending) {
-            if (idx >= 8) break;
-            String f = (t.fromAddress == null ? "GENESIS" : truncate(t.fromAddress, 7));
-            String to = truncate(t.toAddress, 7);
-            String line = String.format("%-7s → %-7s %8.2f", f, to, t.amount);
-            drawLine(y + 2 + idx, x, line, TextColor.ANSI.WHITE);
-            idx++;
-        }
-
-        if (pending.isEmpty()) {
-            drawLine(y + 3, x, "Sin transacciones pendientes", TextColor.ANSI.WHITE);
-        }
-    }
-
-    private void drawStatusContent(int x, int y, int width) throws IOException {
-        drawLine(y, x, "Bloques: " + blockchain.getChain().size(), TextColor.ANSI.GREEN);
-        drawLine(y + 1, x, "TX Pendientes: " + blockchain.txPool.getPending().size(), TextColor.ANSI.GREEN);
-        drawLine(y + 2, x, "Dificultad: " + blockchain.getDifficulty(), TextColor.ANSI.GREEN);
-        drawLine(y + 3, x, "Recompensa: " + blockchain.getMiningReward(), TextColor.ANSI.GREEN);
-        drawLine(y + 4, x, "Wallets: " + wallets.size(), TextColor.ANSI.GREEN);
-    }
-
-    private void drawLogsContent(int x, int y, int width, int maxRows) throws IOException {
-        List<String> logs = logger.getLastLogs(maxRows);
-        int rowCount = 0;
-        for (String l : logs) {
-            if (rowCount >= maxRows) break;
-            drawLine(y + rowCount, x, truncate(l, width), TextColor.ANSI.CYAN);
-            rowCount++;
-        }
     }
 
     private void drawCenter(int row, String text, TextColor color) throws IOException {
@@ -342,74 +552,78 @@ public class BlockchainTUI {
         drawLineAt(start, row, text, color);
     }
 
-    private void drawLine(int row, int col, String text, TextColor color) throws IOException {
-        drawLineAt(col, row, text, color);
-    }
-
     private void drawLineAt(int x, int y, String text, TextColor color) throws IOException {
-        int maxX = screen.getTerminalSize().getColumns();
-        for (int i = 0; i < text.length() && x + i < maxX; i++) {
-            screen.setCharacter(x + i, y, new TextCharacter(text.charAt(i), color, TextColor.ANSI.BLACK));
+        try {
+            if (text == null || text.isEmpty()) return;
+
+            TerminalSize size = screen.getTerminalSize();
+            if (size == null) return;
+
+            int maxX = size.getColumns();
+            int maxY = size.getRows();
+
+            // Validar coordenadas
+            if (x < 0 || y < 0 || x >= maxX || y >= maxY) return;
+
+            // Escribir solo caracteres validos dentro de limites
+            for (int i = 0; i < text.length() && (x + i) < maxX; i++) {
+                char ch = text.charAt(i);
+                if (ch >= 32 && ch < 127) {
+                    screen.setCharacter(x + i, y, new TextCharacter(ch, color, TextColor.ANSI.BLACK));
+                }
+            }
+        } catch (Exception ex) {
+            // Silenciosamente ignorar errores de dibujo
         }
     }
 
     private String truncate(String s, int len) {
-        return (s == null) ? "" : s.length() > len ? s.substring(0, len - 2) + ".." : s;
+        return (s == null) ? "" : s.length() > len ? s.substring(0, Math.max(0, len - 2)) + ".." : s;
     }
 
+    // ==================== STATE & STATS ====================
     private String buildStateHash() {
         StringBuilder sb = new StringBuilder();
         sb.append(blockchain.getChain().size()).append("|");
         for (Wallet w : wallets.values()) sb.append(blockchain.getBalance(w.getAddress())).append(",");
-        sb.append("|").append(blockchain.txPool.getPending().size());
-        sb.append("|").append(inputMode).append("|").append(inputBuffer);
+        sb.append("|").append(blockchain.pendingTransactions.size());
+        sb.append("|").append(currentTab).append("|").append(isMining);
         sb.append("|").append(logger.getLogs().size());
+        // Incluir el estado del input para que se redibuje en tiempo real
+        sb.append("|").append(inputMode).append("|").append(inputBuffer);
         return sb.toString();
     }
 
-
-    // ------------------ WALLET MGMT ------------------
-    public void addWallet(String alias, Wallet w) {
-        wallets.put(alias, w);
-        logger.info("Wallet añadida: " + alias);
-    }
-
     private void showStats() {
-        logger.info("=== ESTADISTICAS ===");
+        logger.info("════════════ ESTADISTICAS ════════════");
         logger.info("Bloques: " + blockchain.getChain().size());
-        logger.info("TX pendientes: " + blockchain.txPool.getPending().size());
+        logger.info("TX Confirmadas: " + blockchain.getChain().stream().mapToInt(b -> b.getTransactions().size()).sum());
+        logger.info("TX Pendientes: " + blockchain.pendingTransactions.size());
         logger.info("Dificultad: " + blockchain.getDifficulty());
         logger.info("Recompensa: " + blockchain.getMiningReward());
+        logger.info("Wallets: " + wallets.size());
+        logger.info("Cadena valida: " + blockchain.isChainValid());
         lastState = "";
     }
 
     private void showHelp() {
-        logger.info("=== AYUDA ===");
-        logger.info("[T] Crear TX: FROM TO AMOUNT");
-        logger.info("[M] Minar: procesa TX pendientes");
-        logger.info("[W] Crear Wallet: define una nueva wallet");
-        logger.info("[S] Ver estadisticas blockchain");
+        logger.info("════════════ AYUDA ════════════");
+        logger.info("[1-5] Cambiar tab");
+        logger.info("[←→] Navegar tabs");
+        logger.info("[T] Crear transaccion");
+        logger.info("[W] Crear wallet");
+        logger.info("[M] Iniciar/pausar mineria");
+        logger.info("[C] Configurar parametros");
+        logger.info("[S] Ver estadisticas");
         logger.info("[H] Mostrar esta ayuda");
-        logger.info("[Q] Salir de la aplicacion");
+        logger.info("[Q] Salir");
         lastState = "";
     }
 
-    private void handleCreateWallet(String alias) {
-        if (alias.isEmpty()) {
-            logger.error("El alias de la wallet no puede estar vacío.");
-            return;
-        }
-        if (wallets.containsKey(alias)) {
-            logger.error("Ya existe una wallet con ese alias: " + alias);
-            return;
-        }
-
-        try {
-            Wallet newWallet = Wallet.createWallet(alias);
-            addWallet(alias, newWallet);
-            logger.info("Wallet creada: " + alias);
-        } catch (Exception e) {
-            logger.error("Error creando wallet: " + e.getMessage());
-        }
+    // ==================== WALLET MANAGEMENT ====================
+    public void addWallet(String alias, Wallet w) {
+        wallets.put(alias, w);
+        logger.info("Wallet anadida: " + alias);
     }
 }
+

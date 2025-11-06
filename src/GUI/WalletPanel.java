@@ -18,6 +18,8 @@ public class WalletPanel extends JPanel {
     private final List<Wallet> wallets;
     private final DefaultTableModel walletsTableModel;
     private final DefaultTableModel transactionsTableModel;
+    private final DefaultComboBoxModel<String> fromWalletModel;
+    private final DefaultComboBoxModel<String> toWalletModel;
     private final JComboBox<String> fromWalletCombo;
     private final JComboBox<String> toWalletCombo;
     private final JTextField amountField;
@@ -33,9 +35,11 @@ public class WalletPanel extends JPanel {
         this.walletsTableModel = new DefaultTableModel(walletColumns, 0);
         this.transactionsTableModel = new DefaultTableModel(txColumns, 0);
 
-        // Inicializar componentes de UI
-        this.fromWalletCombo = new JComboBox<>();
-        this.toWalletCombo = new JComboBox<>();
+        // Inicializar modelos de ComboBox
+        this.fromWalletModel = new DefaultComboBoxModel<>();
+        this.toWalletModel = new DefaultComboBoxModel<>();
+        this.fromWalletCombo = new JComboBox<>(fromWalletModel);
+        this.toWalletCombo = new JComboBox<>(toWalletModel);
         this.amountField = new JTextField();
 
         // Panel izquierdo: Lista de wallets y creación
@@ -121,22 +125,23 @@ public class WalletPanel extends JPanel {
         Wallet wallet = new Wallet(alias);
         wallets.add(wallet);
         updateWalletsList();
+        updateTransactionsList();
     }
 
     private void updateWalletsList() {
         walletsTableModel.setRowCount(0);
-        fromWalletCombo.removeAllItems();
-        toWalletCombo.removeAllItems();
+        fromWalletModel.removeAllElements();
+        toWalletModel.removeAllElements();
 
         for (Wallet wallet : wallets) {
             Vector<Object> row = new Vector<>();
             row.add(wallet.getAddress());
             row.add(wallet.getAlias());
-            row.add(wallet.getBalance(blockchain));
+            row.add(String.format("%.2f", wallet.getBalance(blockchain)));
             walletsTableModel.addRow(row);
 
-            fromWalletCombo.addItem(wallet.getAddress());
-            toWalletCombo.addItem(wallet.getAddress());
+            fromWalletModel.addElement(wallet.getAddress());
+            toWalletModel.addElement(wallet.getAddress());
         }
     }
 
@@ -173,7 +178,7 @@ public class WalletPanel extends JPanel {
 
             // Crear y añadir la transacción
             Transaction tx = fromWallet.createTransaction(toWallet.getAddress(), amount, blockchain);
-            blockchain.createTransaction(tx); // Aseguramos que se añada al pool de transacciones
+            blockchain.createTransaction(tx);
 
             JOptionPane.showMessageDialog(this,
                 "Transacción enviada correctamente",
@@ -219,23 +224,16 @@ public class WalletPanel extends JPanel {
         // Para transacciones de recompensa (minería)
         if (tx.fromAddress == null) {
             row.add("SISTEMA");
-            row.add(tx.toAddress); // Dirección del minero
-            row.add(tx.amount);
+            row.add(tx.toAddress);
+            row.add(String.format("%.2f", tx.amount));
             row.add("Recompensa de minería");
         } else {
             // Para transacciones normales
             row.add(tx.fromAddress);
             row.add(tx.toAddress);
-            row.add(tx.amount);
+            row.add(String.format("%.2f", tx.amount));
             row.add(status);
         }
         transactionsTableModel.addRow(row);
     }
-
-    private String getAliasForAddress(String address) {
-        if (address == null) return "Sistema";
-        return address; // Mostrar la dirección completa
-    }
-
-    // Las actualizaciones ahora se manejan directamente con updateWalletsList() y updateTransactionsList()
 }

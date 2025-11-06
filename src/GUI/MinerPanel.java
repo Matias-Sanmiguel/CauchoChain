@@ -18,13 +18,14 @@ public class MinerPanel extends JPanel {
     private DefaultListModel<String> minedBlocksModel;
     private Timer miningTimer;
     private boolean isMining = false;
+    private int lastBlockCount = 0;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
 
     public MinerPanel(Blockchain blockchain) {
         super(new BorderLayout());
         this.blockchain = blockchain;
 
-        // Inicializar componentes antes de cualquier otra operación
+        // Inicializar componentes
         this.miner = new Miner(2.0f, "GUI_Miner");
         this.minedBlocksModel = new DefaultListModel<>();
         this.logArea = new JTextArea(10, 40);
@@ -34,10 +35,8 @@ public class MinerPanel extends JPanel {
 
         // Panel superior con controles
         JPanel controlPanel = new JPanel(new GridLayout(2, 2, 5, 5));
-        JButton startButton = new JButton("Iniciar Minería");
-        JButton stopButton = new JButton("Detener Minería");
-        hashRateLabel = new JLabel("Tasa de Hash: 0 H/s");
-        rewardLabel = new JLabel("Recompensa Total: 0");
+        JButton startButton = new JButton("Iniciar Mineria");
+        JButton stopButton = new JButton("Detener Mineria");
 
         controlPanel.add(startButton);
         controlPanel.add(stopButton);
@@ -45,13 +44,11 @@ public class MinerPanel extends JPanel {
         controlPanel.add(rewardLabel);
 
         // Barra de progreso
-        miningProgress = new JProgressBar(0, 100);
         miningProgress.setStringPainted(true);
         miningProgress.setString("En espera...");
 
         // Panel central con progreso y log
         JPanel centerPanel = new JPanel(new BorderLayout());
-        logArea = new JTextArea(10, 40);
         logArea.setEditable(false);
         centerPanel.add(miningProgress, BorderLayout.NORTH);
         centerPanel.add(new JScrollPane(logArea), BorderLayout.CENTER);
@@ -59,7 +56,6 @@ public class MinerPanel extends JPanel {
         // Panel derecho con bloques minados
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBorder(BorderFactory.createTitledBorder("Bloques Minados"));
-        minedBlocksModel = new DefaultListModel<>();
         JList<String> minedBlocksList = new JList<>(minedBlocksModel);
         rightPanel.add(new JScrollPane(minedBlocksList), BorderLayout.CENTER);
 
@@ -80,10 +76,11 @@ public class MinerPanel extends JPanel {
         startButton.addActionListener(this::startMining);
         stopButton.addActionListener(this::stopMining);
 
-        // Timer para actualizar UI
+        // Timer para actualizar UI (solo UI, no mineria)
         Timer uiTimer = new Timer(1000, e -> SwingUtilities.invokeLater(() -> {
             updateStats();
             updateProgress();
+            checkForNewBlocks();
         }));
         uiTimer.start();
     }
@@ -92,70 +89,97 @@ public class MinerPanel extends JPanel {
         if (!isMining) {
             isMining = true;
             miningProgress.setString("Minando...");
-            log("Iniciando proceso de minería...");
+            log("Iniciando proceso de mineria...");
+            lastBlockCount = blockchain.getChain().size();
 
-            miningTimer = new Timer(100, evt -> {
-                if (blockchain.pendingTransactions.isEmpty()) {
-                    log("Esperando transacciones...");
-                    return;
-                }
-
-                try {
-                    miner.mine(blockchain);
-                    Block lastBlock = blockchain.getLatestBlock();
-                    if (lastBlock != null && lastBlock.getMinerAddress().equals(miner.getAddress())) {
-                        addMinedBlock(lastBlock);
+            // Ejecutar mineria en un thread separado
+            new Thread(() -> {
+                while (isMining) {
+                    try {
+                        synchronized (blockchain) {
+                            if (!blockchain.pendingTransactions.isEmpty()) {
+                                try {
+                                    miner.mine(blockchain);
+                                    log("Bloque minado exitosamente");
+                                } catch (Exception ex) {
+                                    log("Error minando: " + ex.getMessage());
+                                }
+                            } else {
+                                log("Esperando transacciones...");
+                            }
+                        }
+                        Thread.sleep(1000);
+                    } catch (InterruptedException ex) {
+                        break;
                     }
-                } catch (Exception ex) {
-                    log("Error durante la minería: " + ex.getMessage());
                 }
-            });
-            miningTimer.start();
+            }).setDaemon(true);
         }
     }
 
     private void stopMining(ActionEvent e) {
         if (isMining) {
             isMining = false;
-            if (miningTimer != null) {
-                miningTimer.stop();
-            }
             miningProgress.setString("Detenido");
-            log("Minería detenida.");
+            log("Mineria detenida.");
         }
     }
 
     private void updateStats() {
-        if (miner != null) {
-            float hashRate = miner.getHashRate();
-            float totalReward = miner.getTotalMined();
-            hashRateLabel.setText(String.format("Tasa de Hash: %.1f H/s", hashRate));
-            rewardLabel.setText(String.format("Recompensa Total: %.2f", totalReward));
+        try {
+            if (miner != null) {
+                float hashRate = miner.getHashRate();
+                float totalReward = miner.getTotalMined();
+                hashRateLabel.setText(String.format("Tasa de Hash: %.1f H/s", hashRate));
+                rewardLabel.setText(String.format("Recompensa Total: %.2f", totalReward));
+            }
+        } catch (Exception ex) {
+            log("Error actualizando stats: " + ex.getMessage());
         }
     }
 
     private void updateProgress() {
         if (isMining) {
-            int progress = (int)(Math.random() * 100);  // Simulación
+            int progress = (int) (Math.random() * 100);
             miningProgress.setValue(progress);
         }
     }
 
+    private void checkForNewBlocks() {
+        try {
+            int currentBlockCount = blockchain.getChain().size();
+            if (currentBlockCount > lastBlockCount) {
+                Block lastBlock = blockchain.getLatestBlock();
+                if (lastBlock != null) {
+                    addMinedBlock(lastBlock);
+                }
+                lastBlockCount = currentBlockCount;
+            }
+        } catch (Exception ex) {
+            log("Error checando bloques: " + ex.getMessage());
+        }
+    }
+
     private void addMinedBlock(Block block) {
-        String blockInfo = String.format("Bloque #%d | %s | Tx: %d | Reward: %.2f",
-            block.getIndex(),
-            dateFormat.format(block.getTimestamp()),
-            block.getTransactions().size(),
-            blockchain.getMiningReward()
-        );
-        minedBlocksModel.add(0, blockInfo);
-        log("¡Bloque minado exitosamente! " + blockInfo);
+        try {
+            String blockInfo = String.format("Bloque #%d | %s | Tx: %d | Reward: %.2f",
+                block.getIndex(),
+                dateFormat.format(block.getTimestamp()),
+                block.getTransactions().size(),
+                blockchain.getMiningReward()
+            );
+            minedBlocksModel.add(0, blockInfo);
+        } catch (Exception ex) {
+            log("Error anadiendo bloque a lista: " + ex.getMessage());
+        }
     }
 
     private void log(String message) {
-        SwingUtilities.invokeLater(() -> {
-            logArea.append("[" + dateFormat.format(System.currentTimeMillis()) + "] " + message + "\n");
+        try {
+            logArea.append("[" + dateFormat.format(new java.util.Date()) + "] " + message + "\n");
             logArea.setCaretPosition(logArea.getDocument().getLength());
-        });
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 }

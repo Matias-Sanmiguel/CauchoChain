@@ -112,15 +112,7 @@ public class Blockchain extends BlockchainCore {
             }
         }
 
-        // Revisar transacciones pendientes también
-        for (Transaction tx : pendingTransactions) {
-            if (address.equals(tx.fromAddress)) {
-                balance -= tx.amount;
-            }
-            if (address.equals(tx.toAddress)) {
-                balance += tx.amount;
-            }
-        }
+        // NO contar transacciones pendientes - solo las confirmadas en bloques
         return balance;
     }
 
@@ -164,6 +156,12 @@ public class Blockchain extends BlockchainCore {
 
     public float getMiningReward() {
         return miningReward;
+    }
+
+    public void setMiningReward(float newReward) {
+        if (newReward > 0) {
+            this.miningReward = newReward;
+        }
     }
 
     public Logger getLogger() {
