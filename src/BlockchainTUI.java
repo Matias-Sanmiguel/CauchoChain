@@ -191,7 +191,7 @@ public class BlockchainTUI {
         int y = 0;
 
         drawCenter(y++, "╔══════════════════════════════════════════════════════╗", TextColor.ANSI.CYAN);
-        drawCenter(y++, "║      ⚡ CAUCHOCHAIN TUI - Blockchain Demo ⚡         ║", TextColor.ANSI.CYAN);
+        drawCenter(y++, "║                    CAUCHOCHAIN TUI                   ║", TextColor.ANSI.CYAN);
         drawCenter(y++, "╚══════════════════════════════════════════════════════╝", TextColor.ANSI.CYAN);
         y++;
 
