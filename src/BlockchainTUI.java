@@ -188,88 +188,165 @@ public class BlockchainTUI {
     // ------------------ DRAW ------------------
     private void draw() throws IOException {
         screen.clear();
-        int y = 0;
+        TerminalSize size = screen.getTerminalSize();
+        int width = size.getColumns();
+        int height = size.getRows();
 
-        drawCenter(y++, "╔══════════════════════════════════════════════════════╗", TextColor.ANSI.CYAN);
-        drawCenter(y++, "║                    CAUCHOCHAIN TUI                   ║", TextColor.ANSI.CYAN);
-        drawCenter(y++, "╚══════════════════════════════════════════════════════╝", TextColor.ANSI.CYAN);
-        y++;
+        // Header
+        drawBox(0, 0, width, 3, TextColor.ANSI.CYAN);
+        drawCenter(1, "⚡ CAUCHOCHAIN TUI - Blockchain Demo ⚡", TextColor.ANSI.CYAN);
 
-        // Blockchain
-        drawSection(y++, "Blockchain", TextColor.ANSI.BLUE);
-        List<Block> blocks = blockchain.getChain();
-        int start = Math.max(0, blocks.size() - 3);
-        for (int i = start; i < blocks.size(); i++) {
-            Block b = blocks.get(i);
-            String line = String.format("#%-2d %s", b.getIndex(), truncate(b.getHash(), 45));
-            drawLine(y++, "| " + padRight(line, 55) + "|", TextColor.ANSI.WHITE);
-        }
-        drawLine(y++, "+-------------------------------------------------------+", TextColor.ANSI.BLUE);
-        y++;
+        int y = 4;
+        int col1Width = width / 2 - 2;
+        int col2Width = width / 2 - 2;
+        int leftCol = 1;
+        int rightCol = leftCol + col1Width + 2;
 
-        // Wallets
-        drawSection(y++, "Wallets", TextColor.ANSI.MAGENTA);
-        drawLine(y++, "| Alias       Balance      |", TextColor.ANSI.MAGENTA);
-        for (var e : wallets.entrySet()) {
-            float bal = blockchain.getBalance(e.getValue().getAddress());
-            drawLine(y++, String.format("| %-10s %10.2f |", e.getKey(), bal), TextColor.ANSI.WHITE);
-        }
-        drawLine(y++, "+---------------------------+", TextColor.ANSI.MAGENTA);
-        y++;
+        // Left Panel: Blockchain + Wallets
+        drawPanel(leftCol, y, col1Width, 12, "📦 Blockchain", TextColor.ANSI.BLUE);
+        drawBlockchainContent(leftCol + 1, y + 2, col1Width - 2);
 
-        // TX pendientes
-        drawSection(y++, "Pendientes", TextColor.ANSI.YELLOW);
-        List<Transaction> pending = blockchain.txPool.getPending();
-        if (pending.isEmpty()) drawLine(y++, "| No hay transacciones pendientes |", TextColor.ANSI.WHITE);
-        else for (Transaction t : pending.subList(0, Math.min(3, pending.size()))) {
-            String f = (t.fromAddress == null ? "GENESIS" : truncate(t.fromAddress, 8));
-            String to = truncate(t.toAddress, 8);
-            drawLine(y++, String.format("| %-8s → %-8s : %8.2f |", f, to, t.amount), TextColor.ANSI.WHITE);
-        }
-        drawLine(y++, "+--------------------------------+", TextColor.ANSI.YELLOW);
-        y++;
+        drawPanel(leftCol, y + 14, col1Width, 12, "💳 Wallets", TextColor.ANSI.MAGENTA);
+        drawWalletsContent(leftCol + 1, y + 16, col1Width - 2);
 
-        // Input o controles
+        // Right Panel: Transactions + Status
+        drawPanel(rightCol, y, col2Width, 12, "📋 Transacciones Pendientes", TextColor.ANSI.YELLOW);
+        drawTransactionsContent(rightCol + 1, y + 2, col2Width - 2);
+
+        drawPanel(rightCol, y + 14, col2Width, 12, "📊 Estado", TextColor.ANSI.GREEN);
+        drawStatusContent(rightCol + 1, y + 16, col2Width - 2);
+
+        // Bottom: Input or Controls & Logs
+        int bottomY = height - 12;
         if (!inputMode.isEmpty()) {
-            drawSection(y++, "Entrada", TextColor.ANSI.WHITE);
-            drawLine(y++, "| " + padRight(inputPrompt, 46) + "|", TextColor.ANSI.YELLOW);
-            drawLine(y++, "| > " + padRight(inputBuffer + "_", 44) + "|", TextColor.ANSI.WHITE);
-            drawLine(y++, "+--------------------------------------------+", TextColor.ANSI.WHITE);
+            drawPanel(1, bottomY, width - 2, 5, "⌨️  Entrada", TextColor.ANSI.WHITE);
+            drawLine(bottomY + 2, 2, "➜ " + inputPrompt, TextColor.ANSI.YELLOW);
+            drawLine(bottomY + 3, 4, "> " + inputBuffer + "_", TextColor.ANSI.WHITE);
+            drawLine(bottomY + 4, 2, "(ESC=Cancelar, ENTER=Confirmar)", TextColor.ANSI.CYAN);
         } else {
-            drawCenter(y++, "[T]=Tx   [M]=Mine   [W]=Wallet   [S]=Stats   [H]=Help   [Q]=Exit", TextColor.ANSI.GREEN);
+            drawPanel(1, bottomY, width - 2, 5, "⌨️  Controles", TextColor.ANSI.GREEN);
+            drawCenter(bottomY + 2, "[T]=Transacción  [M]=Minar  [W]=Wallet  [S]=Stats  [H]=Ayuda  [Q]=Salir", TextColor.ANSI.GREEN);
         }
-        y++;
 
-        // Logs
-        drawSection(y++, "Logs", TextColor.ANSI.CYAN);
-        List<String> logs = logger.getLastLogs(5);
-        for (String l : logs)
-            drawLine(y++, " " + truncate(l, 55), TextColor.ANSI.WHITE);
+        // Logs Panel
+        drawPanel(1, bottomY + 6, width - 2, height - bottomY - 7, "📝 Logs", TextColor.ANSI.CYAN);
+        drawLogsContent(3, bottomY + 8, width - 4);
 
         screen.refresh();
     }
 
-    // ------------------ HELPERS ------------------
-    private void drawSection(int row, String title, TextColor color) throws IOException {
-        drawLine(row, "╔═ " + title + " ═══════════════════════════════════════════════╗", color);
+    private void drawBox(int x, int y, int width, int height, TextColor color) throws IOException {
+        // Top border
+        for (int i = 0; i < width; i++) {
+            screen.setCharacter(x + i, y, new TextCharacter('═', color, TextColor.ANSI.BLACK));
+        }
+        // Bottom border
+        for (int i = 0; i < width; i++) {
+            screen.setCharacter(x + i, y + height - 1, new TextCharacter('═', color, TextColor.ANSI.BLACK));
+        }
+        // Left & Right borders
+        for (int i = 1; i < height - 1; i++) {
+            screen.setCharacter(x, y + i, new TextCharacter('║', color, TextColor.ANSI.BLACK));
+            screen.setCharacter(x + width - 1, y + i, new TextCharacter('║', color, TextColor.ANSI.BLACK));
+        }
+        // Corners
+        screen.setCharacter(x, y, new TextCharacter('╔', color, TextColor.ANSI.BLACK));
+        screen.setCharacter(x + width - 1, y, new TextCharacter('╗', color, TextColor.ANSI.BLACK));
+        screen.setCharacter(x, y + height - 1, new TextCharacter('╚', color, TextColor.ANSI.BLACK));
+        screen.setCharacter(x + width - 1, y + height - 1, new TextCharacter('╝', color, TextColor.ANSI.BLACK));
     }
 
-    private void drawLine(int row, String text, TextColor color) throws IOException {
-        for (int i = 0; i < text.length() && i < screen.getTerminalSize().getColumns(); i++) {
-            screen.setCharacter(i, row, new TextCharacter(text.charAt(i), color, TextColor.ANSI.BLACK));
+    private void drawPanel(int x, int y, int width, int height, String title, TextColor color) throws IOException {
+        drawBox(x, y, width, height, color);
+        String titleStr = " " + title + " ";
+        int titleX = x + (width - titleStr.length()) / 2;
+        drawLineAt(titleX, y, titleStr, color);
+    }
+
+    private void drawBlockchainContent(int x, int y, int width) throws IOException {
+        List<Block> blocks = blockchain.getChain();
+        int maxRows = 9;
+        int start = Math.max(0, blocks.size() - maxRows);
+
+        for (int i = start; i < blocks.size(); i++) {
+            Block b = blocks.get(i);
+            String line = String.format("Block #%d: %s", b.getIndex(), truncate(b.getHash(), width - 12));
+            drawLine(y + (i - start), x, line, TextColor.ANSI.CYAN);
+        }
+
+        if (blocks.isEmpty()) {
+            drawLine(y + 1, x, "Sin bloques aún...", TextColor.ANSI.WHITE);
+        }
+    }
+
+    private void drawWalletsContent(int x, int y, int width) throws IOException {
+        drawLine(y, x, "Alias          Balance", TextColor.ANSI.MAGENTA);
+        drawLine(y + 1, x, "────────────────────────", TextColor.ANSI.MAGENTA);
+
+        int idx = 0;
+        for (var e : wallets.entrySet()) {
+            if (idx >= 8) break;
+            float bal = blockchain.getBalance(e.getValue().getAddress());
+            String line = String.format("%-14s %10.2f", e.getKey(), bal);
+            drawLine(y + 2 + idx, x, line, TextColor.ANSI.WHITE);
+            idx++;
+        }
+
+        if (wallets.isEmpty()) {
+            drawLine(y + 3, x, "Sin wallets...", TextColor.ANSI.WHITE);
+        }
+    }
+
+    private void drawTransactionsContent(int x, int y, int width) throws IOException {
+        List<Transaction> pending = blockchain.txPool.getPending();
+        drawLine(y, x, "From      To        Monto", TextColor.ANSI.YELLOW);
+        drawLine(y + 1, x, "─────────────────────────", TextColor.ANSI.YELLOW);
+
+        int idx = 0;
+        for (Transaction t : pending) {
+            if (idx >= 8) break;
+            String f = (t.fromAddress == null ? "GENESIS" : truncate(t.fromAddress, 7));
+            String to = truncate(t.toAddress, 7);
+            String line = String.format("%-7s → %-7s %8.2f", f, to, t.amount);
+            drawLine(y + 2 + idx, x, line, TextColor.ANSI.WHITE);
+            idx++;
+        }
+
+        if (pending.isEmpty()) {
+            drawLine(y + 3, x, "Sin transacciones pendientes", TextColor.ANSI.WHITE);
+        }
+    }
+
+    private void drawStatusContent(int x, int y, int width) throws IOException {
+        drawLine(y, x, "Bloques: " + blockchain.getChain().size(), TextColor.ANSI.GREEN);
+        drawLine(y + 1, x, "TX Pendientes: " + blockchain.txPool.getPending().size(), TextColor.ANSI.GREEN);
+        drawLine(y + 2, x, "Dificultad: " + blockchain.getDifficulty(), TextColor.ANSI.GREEN);
+        drawLine(y + 3, x, "Recompensa: " + blockchain.getMiningReward(), TextColor.ANSI.GREEN);
+        drawLine(y + 4, x, "Wallets: " + wallets.size(), TextColor.ANSI.GREEN);
+    }
+
+    private void drawLogsContent(int x, int y, int width) throws IOException {
+        List<String> logs = logger.getLastLogs(5);
+        for (String l : logs) {
+            drawLine(y++, x, truncate(l, width), TextColor.ANSI.CYAN);
         }
     }
 
     private void drawCenter(int row, String text, TextColor color) throws IOException {
         int width = screen.getTerminalSize().getColumns();
         int start = Math.max(0, (width - text.length()) / 2);
-        for (int i = 0; i < text.length() && start + i < width; i++) {
-            screen.setCharacter(start + i, row, new TextCharacter(text.charAt(i), color, TextColor.ANSI.BLACK));
-        }
+        drawLineAt(start, row, text, color);
     }
 
-    private String padRight(String s, int len) {
-        return s.length() >= len ? s.substring(0, len) : s + " ".repeat(len - s.length());
+    private void drawLine(int row, int col, String text, TextColor color) throws IOException {
+        drawLineAt(col, row, text, color);
+    }
+
+    private void drawLineAt(int x, int y, String text, TextColor color) throws IOException {
+        int maxX = screen.getTerminalSize().getColumns();
+        for (int i = 0; i < text.length() && x + i < maxX; i++) {
+            screen.setCharacter(x + i, y, new TextCharacter(text.charAt(i), color, TextColor.ANSI.BLACK));
+        }
     }
 
     private String truncate(String s, int len) {
@@ -285,6 +362,7 @@ public class BlockchainTUI {
         sb.append("|").append(logger.getLogs().size());
         return sb.toString();
     }
+
 
     // ------------------ WALLET MGMT ------------------
     public void addWallet(String alias, Wallet w) {
