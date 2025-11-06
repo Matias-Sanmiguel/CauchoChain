@@ -229,8 +229,9 @@ public class BlockchainTUI {
         }
 
         // Logs Panel
-        drawPanel(1, bottomY + 6, width - 2, height - bottomY - 7, "Logs", TextColor.ANSI.CYAN);
-        drawLogsContent(3, bottomY + 8, width - 4);
+        int logsPanelHeight = height - bottomY - 7;
+        drawPanel(1, bottomY + 6, width - 2, logsPanelHeight, "Logs", TextColor.ANSI.CYAN);
+        drawLogsContent(3, bottomY + 8, width - 4, logsPanelHeight - 3);
 
         screen.refresh();
     }
@@ -325,10 +326,13 @@ public class BlockchainTUI {
         drawLine(y + 4, x, "Wallets: " + wallets.size(), TextColor.ANSI.GREEN);
     }
 
-    private void drawLogsContent(int x, int y, int width) throws IOException {
-        List<String> logs = logger.getLastLogs(5);
+    private void drawLogsContent(int x, int y, int width, int maxRows) throws IOException {
+        List<String> logs = logger.getLastLogs(maxRows);
+        int rowCount = 0;
         for (String l : logs) {
-            drawLine(y++, x, truncate(l, width), TextColor.ANSI.CYAN);
+            if (rowCount >= maxRows) break;
+            drawLine(y + rowCount, x, truncate(l, width), TextColor.ANSI.CYAN);
+            rowCount++;
         }
     }
 
