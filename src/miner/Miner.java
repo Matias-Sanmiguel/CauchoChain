@@ -8,6 +8,7 @@ import model.Transaction;
 import model.User;
 import wallet.Wallet;
 import utils.Logger;
+import model.BlockValidator;
 
 public class Miner implements IMiner {
     private float hashMined;
@@ -15,10 +16,10 @@ public class Miner implements IMiner {
     private Wallet wallet;
     private Logger logger;
 
-    public Miner(float hashRate){
-        this.hashMined=0.0f;
-        this.hashRate=hashRate;
-        this.wallet=new Wallet("Miner_" + System.currentTimeMillis());
+    public Miner(float hashRate) {
+        this.hashMined = 0.0f;
+        this.hashRate = hashRate;
+        this.wallet = new Wallet("Miner_" + System.currentTimeMillis());
         this.logger = Logger.getInstance();
     }
 
@@ -36,7 +37,7 @@ public class Miner implements IMiner {
         this.logger = Logger.getInstance();
     }
 
-    public void mine(Blockchain bc){
+    public void mine(Blockchain bc) {
         if (bc.pendingTransactions.isEmpty()) {
             logger.warning("No hay transacciones pendientes para minar.");
             return;
@@ -57,7 +58,7 @@ public class Miner implements IMiner {
         long startTime = System.currentTimeMillis();
 
         while (!newBlock.getHash().substring(0, Math.min(difficulty, newBlock.getHash().length())).equals(target)) {
-            newBlock.setNonce(newBlock.getNonce()+1);
+            newBlock.setNonce(newBlock.getNonce() + 1);
             newBlock.setHash(newBlock.calculateHash());
         }
 
@@ -80,30 +81,18 @@ public class Miner implements IMiner {
         this.hashMined += miningReward;
         this.wallet.getBalance(bc);
 
-        logger.success("Bloque #" + newBlock.getIndex() + " minado por " + wallet.getAlias() + " en " + timeTaken + "ms | Nonce: " + newBlock.getNonce() + " | Recompensa: " + miningReward);
+        logger.success("Bloque #" + newBlock.getIndex() + " minado por " + wallet.getAlias() + " en " + timeTaken
+                + "ms | Nonce: " + newBlock.getNonce() + " | Recompensa: " + miningReward);
     }
 
     @Override
-    public boolean validateBlock(Block block){
-        if (!block.getHash().equals(block.calculateHash())) {
-            logger.error("Hash inválido en bloque #" + block.getIndex());
-            return false;
-        }
-
-        if (!block.hasValidTransactions()) {
-            logger.error("Transacciones inválidas en bloque #" + block.getIndex());
-            return false;
-        }
-
-        int difficulty = 3;
-        String target = new String(new char[difficulty]).replace('\0', '0');
-        if (!block.getHash().substring(0, Math.min(difficulty, block.getHash().length())).equals(target)) {
-            logger.error("Dificultad no cumplida en bloque #" + block.getIndex());
-            return false;
-        }
-
-        logger.debug("Bloque #" + block.getIndex() + " validado correctamente");
-        return true;
+    public boolean validateBlock(Block block) {
+        // Ideally, validateBlock should receive the blockchain instance or difficulty
+        // For now, we can assume a default or try to get it if we change the signature.
+        // But to keep signature, we will use BlockValidator with a hardcoded difficulty
+        // or similar logic.
+        // Wait, the original code had hardcoded difficulty 3 here.
+        return BlockValidator.validateBlock(block, 3);
     }
 
     public float getTotalMined() {

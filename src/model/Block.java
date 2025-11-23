@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class Block {
+import java.io.Serializable;
+
+public class Block implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     private String hash;
     private String prevHash;
@@ -17,7 +20,6 @@ public class Block {
     private String minerAddress;
     private String signature; // firma del bloque
 
-
     public Block(int index, List<Transaction> transactions, String prevHash, String minerAddress) {
         this.index = index;
         this.transactions = new ArrayList<>(transactions);
@@ -28,7 +30,8 @@ public class Block {
         this.hash = calculateHash();
     }
 
-    public Block(int index, List<Transaction> transactions, String prevHash, String minerAddress, long timestampMillis) {
+    public Block(int index, List<Transaction> transactions, String prevHash, String minerAddress,
+            long timestampMillis) {
         this.index = index;
         this.transactions = new ArrayList<>(transactions);
         this.minerAddress = minerAddress;
@@ -47,18 +50,21 @@ public class Block {
     }
 
     // Concatena todoo para generar el hash del bloque
-    public String calculateHash(){
-        String datoParaHash = index + (prevHash == null ? "" : prevHash) + timestamp.getTime() + nonce + getMerkleRoot();
+    public String calculateHash() {
+        String datoParaHash = index + (prevHash == null ? "" : prevHash) + timestamp.getTime() + nonce
+                + getMerkleRoot();
         return crypto.hash(datoParaHash);
     }
 
-    // MerkleRoot es básicamente una forma de reducir las transacciones de un bloque que le des, es una formula matematica que se usa para hashear
+    // MerkleRoot es básicamente una forma de reducir las transacciones de un bloque
+    // que le des, es una formula matematica que se usa para hashear
     public String getMerkleRoot() {
         List<String> treeLayer = new ArrayList<>();
         for (Transaction tx : transactions) {
             treeLayer.add(tx.calculateHash());
         }
-        if (treeLayer.isEmpty()) return "";
+        if (treeLayer.isEmpty())
+            return "";
         while (treeLayer.size() > 1) {
             List<String> nextLayer = new ArrayList<>();
             for (int i = 0; i < treeLayer.size(); i += 2) {
@@ -75,10 +81,13 @@ public class Block {
 
     // valida las transacciones
     public boolean hasValidTransactions() {
-        if (transactions == null) return true;
+        if (transactions == null)
+            return true;
         for (Transaction tx : transactions) {
-            if (tx == null) continue;
-            if (!tx.isValid()) return false;
+            if (tx == null)
+                continue;
+            if (!tx.isValid())
+                return false;
         }
         return true;
     }
@@ -120,7 +129,7 @@ public class Block {
     }
 
     public String getMinerAddress() {
-        return minerAddress;     
+        return minerAddress;
     }
 
 }

@@ -52,48 +52,7 @@ public class Blockchain extends BlockchainCore {
 
     // Minado de las transacciones pendientes. Recompensa al miner
     public void minePendingTransactions(Miner miner) {
-        if (pendingTransactions.isEmpty()) {
-            logger.warning("No hay transacciones pendientes para minar.");
-            return;
-        }
-
-        logger.info("Iniciando minado de bloque con " + pendingTransactions.size() + " transacciones");
-        List<Transaction> transactionsToMine = new ArrayList<>(pendingTransactions);
-
-        Block latest = getLatestBlock();
-        String prevHash = (latest == null) ? "0" : latest.getHash();
-
-        Block newBlock = new Block(getChain().size(), transactionsToMine, prevHash, miner instanceof Miner ? ((Miner) miner).getAddress() : "UNKNOWN");
-
-        String target = new String(new char[difficulty]).replace('\0', '0');
-        long startTime = System.currentTimeMillis();
-
-        while (!newBlock.getHash().substring(0, difficulty).equals(target)) {
-            newBlock.incrementNonce();
-            newBlock.setHash(newBlock.calculateHash());
-        }
-
-        long miningTime = System.currentTimeMillis() - startTime;
-
-        // Validar transacciones del bloque
-        if (!newBlock.hasValidTransactions()) {
-            logger.error("El bloque contiene transacciones inválidas");
-            throw new RuntimeException("El bloque contiene transacciones inválidas.");
-        }
-
-        // Agregar bloque minado a la cadena
-        getChain().add(newBlock);
-
-        // Limpiar pool: quitar transacciones minadas
-        this.txPool.removeTransactions(transactionsToMine);
-        this.pendingTransactions.removeAll(transactionsToMine);
-
-        // Crear transacción de recompensa para el minero (se añade a pendientes para el siguiente bloque)
-        Transaction rewardTx = new Transaction(null, miner.getAddress(), miningReward);
-        this.pendingTransactions.add(rewardTx);
-        this.txPool.addTransaction(rewardTx);
-
-        logger.success("Bloque #" + newBlock.getIndex() + " minado en " + miningTime + "ms | Hash: " + newBlock.getHash() + " | Nonce: " + newBlock.getNonce());
+        miner.mine(this);
     }
 
     public float getBalance(String address) {
@@ -121,26 +80,7 @@ public class Blockchain extends BlockchainCore {
     }
 
     public boolean isChainValid() {
-        logger.debug("Validando cadena de bloques");
-        for (int i = 1; i < getChain().size(); i++) {
-            Block current = getChain().get(i);
-            Block previous = getChain().get(i - 1);
-
-            if (!current.getHash().equals(current.calculateHash())) {
-                logger.error("Hash inválido en bloque #" + i);
-                return false;
-            }
-            if (!current.getPrevHash().equals(previous.getHash())) {
-                logger.error("Link roto entre bloque #" + (i-1) + " y #" + i);
-                return false;
-            }
-            if (!current.hasValidTransactions()) {
-                logger.error("Transacciones inválidas en bloque #" + i);
-                return false;
-            }
-        }
-        logger.success("Cadena de bloques validada correctamente");
-        return true;
+        return validateChain();
     }
 
     public int getDifficulty() {

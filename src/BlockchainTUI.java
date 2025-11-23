@@ -17,6 +17,8 @@ public class BlockchainTUI {
     private final Map<String, ValidatorNode> nodes = new LinkedHashMap<>();
     private final Logger logger;
     private final SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss");
+    private P2PNetworkNode p2pNode;
+    private int port;
 
     private Screen screen;
     private volatile boolean running = true;
@@ -26,15 +28,17 @@ public class BlockchainTUI {
     private String lastState = "";
 
     private int currentTab = 0; // 0=Blockchain, 1=Wallets, 2=Mining, 3=Nodes, 4=Config, 5=Transactions
-    private final String[] TAB_NAMES = {"Blockchain", "Wallets", "Mineria", "Nodos", "Config", "Transacciones"};
+    private final String[] TAB_NAMES = { "Blockchain", "Wallets", "Mineria", "Nodos", "Config", "Transacciones" };
 
     private boolean isMining = false;
     private Miner activeMiner;
     private int minedBlocksCount = 0;
 
-    public BlockchainTUI(Blockchain blockchain) {
+    public BlockchainTUI(Blockchain blockchain, int port) {
         this.blockchain = blockchain;
+        this.port = port;
         this.logger = Logger.getInstance();
+        this.p2pNode = new P2PNetworkNode("Node-" + port, port, blockchain);
     }
 
     public void start() throws IOException {
@@ -42,7 +46,8 @@ public class BlockchainTUI {
         screen.startScreen();
         screen.setCursorPosition(null);
 
-        logger.info("TUI iniciada. Presiona [H] para ayuda.");
+        p2pNode.connect(); // Inicia el servidor P2P
+        logger.info("TUI iniciada en puerto " + port + ". Presiona [H] para ayuda.");
         initializeWallets();
 
         while (running) {
@@ -53,9 +58,13 @@ public class BlockchainTUI {
             }
 
             KeyStroke key = screen.pollInput();
-            if (key != null) handleInput(key);
+            if (key != null)
+                handleInput(key);
 
-            try { Thread.sleep(100); } catch (InterruptedException ignored) {}
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ignored) {
+            }
         }
 
         screen.stopScreen();
@@ -64,6 +73,8 @@ public class BlockchainTUI {
     public void stop() throws IOException {
         running = false;
         isMining = false;
+        if (p2pNode != null)
+            p2pNode.disconnect();
         if (screen != null) {
             screen.stopScreen();
             screen.close();
@@ -75,15 +86,23 @@ public class BlockchainTUI {
             Wallet wallet1 = new Wallet("Wallet-1");
             wallets.put("Wallet-1", wallet1);
 
-            Transaction initialTx = new Transaction(null, wallet1.getAddress(), 50.0f);
-            blockchain.createTransaction(initialTx);
-
-            Miner initialMiner = new Miner(2.0f, "InitialMiner");
-            blockchain.minePendingTransactions(initialMiner);
-            minedBlocksCount++;
-
             Wallet wallet2 = new Wallet("Wallet-2");
             wallets.put("Wallet-2", wallet2);
+
+            // Solo el nodo principal (puerto 5000) crea la oferta inicial
+            if (port == 5000) {
+                logger.info("Nodo Maestro detectado (5000). Generando oferta inicial...");
+                Transaction initialTx = new Transaction(null, wallet1.getAddress(), 100.0f);
+                blockchain.createTransaction(initialTx);
+
+                Miner initialMiner = new Miner(2.0f, "GenesisMiner");
+                blockchain.minePendingTransactions(initialMiner);
+                minedBlocksCount++;
+
+                // Broadcast del bloque minado para que otros nodos (si ya estan conectados) lo
+                // reciban
+                // Aunque al inicio no habra nadie conectado, esto deja el estado listo.
+            }
 
             logger.info("Wallets iniciales creadas");
         } catch (Exception e) {
@@ -101,32 +120,65 @@ public class BlockchainTUI {
         }
 
         if (c == null) {
-            if (type == KeyType.ArrowLeft) currentTab = Math.max(0, currentTab - 1);
-            if (type == KeyType.ArrowRight) currentTab = Math.min(5, currentTab + 1);
+            if (type == KeyType.ArrowLeft)
+                currentTab = Math.max(0, currentTab - 1);
+            if (type == KeyType.ArrowRight)
+                currentTab = Math.min(5, currentTab + 1);
             return;
         }
 
         switch (Character.toLowerCase(c)) {
-            case '1': currentTab = 0; break;
-            case '2': currentTab = 1; break;
-            case '3': currentTab = 2; break;
-            case '4': currentTab = 3; break;
-            case '5': currentTab = 4; break;
-            case '6': currentTab = 5; break;
-            case 't': openTxInput(); break;
-            case 'w': openWalletInput(); break;
-            case 'n': openNodeInput(); break;
-            case 'm': toggleMining(); break;
-            case 's': showStats(); break;
-            case 'c': openConfigInput(); break;
-            case 'h': showHelp(); break;
-            case 'q': running = false; logger.info("Saliendo..."); break;
+            case '1':
+                currentTab = 0;
+                break;
+            case '2':
+                currentTab = 1;
+                break;
+            case '3':
+                currentTab = 2;
+                break;
+            case '4':
+                currentTab = 3;
+                break;
+            case '5':
+                currentTab = 4;
+                break;
+            case '6':
+                currentTab = 5;
+                break;
+            case 't':
+                openTxInput();
+                break;
+            case 'w':
+                openWalletInput();
+                break;
+            case 'n':
+                openNodeInput();
+                break;
+            case 'm':
+                toggleMining();
+                break;
+            case 's':
+                showStats();
+                break;
+            case 'c':
+                openConfigInput();
+                break;
+            case 'h':
+                showHelp();
+                break;
+            case 'q':
+                running = false;
+                logger.info("Saliendo...");
+                break;
         }
     }
 
     private void handleInputMode(KeyType type, Character c) {
         if (type == KeyType.Escape) {
-            inputMode = ""; inputBuffer = ""; inputPrompt = "";
+            inputMode = "";
+            inputBuffer = "";
+            inputPrompt = "";
             logger.info("Operacion cancelada");
         } else if (type == KeyType.Backspace && inputBuffer.length() > 0) {
             inputBuffer = inputBuffer.substring(0, inputBuffer.length() - 1);
@@ -151,7 +203,7 @@ public class BlockchainTUI {
 
     private void openNodeInput() {
         inputMode = "node";
-        inputPrompt = "ALIAS DIRECCION (ej: MiNodo 127.0.0.1:5000):";
+        inputPrompt = "IP PUERTO (ej: 127.0.0.1 5001):";
         inputBuffer = "";
     }
 
@@ -164,12 +216,18 @@ public class BlockchainTUI {
     private void processInput() {
         String text = inputBuffer.trim();
         String mode = inputMode;
-        inputMode = ""; inputBuffer = ""; inputPrompt = "";
+        inputMode = "";
+        inputBuffer = "";
+        inputPrompt = "";
 
-        if (mode.equals("tx")) handleTx(text);
-        else if (mode.equals("wallet")) handleCreateWallet(text);
-        else if (mode.equals("node")) handleCreateNode(text);
-        else if (mode.equals("config")) handleConfig(text);
+        if (mode.equals("tx"))
+            handleTx(text);
+        else if (mode.equals("wallet"))
+            handleCreateWallet(text);
+        else if (mode.equals("node"))
+            handleCreateNode(text);
+        else if (mode.equals("config"))
+            handleConfig(text);
     }
 
     private void handleTx(String input) {
@@ -193,8 +251,9 @@ public class BlockchainTUI {
 
             Transaction tx = fromWallet.createTransaction(toAddress, amount, blockchain);
             blockchain.createTransaction(tx);
+            p2pNode.broadcastTransaction(tx); // Broadcast P2P
 
-            logger.info("TX creada: " + from + " -> " + to + " (" + amount + ")");
+            logger.info("TX creada y difundida: " + from + " -> " + to + " (" + amount + ")");
         } catch (NumberFormatException e) {
             logger.error("Monto invalido: " + e.getMessage());
         } catch (Exception e) {
@@ -225,24 +284,26 @@ public class BlockchainTUI {
         try {
             String[] parts = input.split("\\s+");
             if (parts.length != 2) {
-                logger.error("Formato invalido. Usa: ALIAS DIRECCION");
+                logger.error("Formato invalido. Usa: IP PUERTO");
                 return;
             }
 
-            String alias = parts[0];
-            String address = parts[1];
+            String ip = parts[0];
+            int targetPort = Integer.parseInt(parts[1]);
 
-            if (nodes.containsKey(alias)) {
-                logger.error("Nodo ya existe: " + alias);
-                return;
-            }
+            p2pNode.connectToPeer(ip, targetPort);
 
-            ValidatorNode newNode = new ValidatorNode(alias, address);
+            // Agregamos visualmente a la lista de nodos (aunque P2PNode maneja la conexion
+            // real)
+            String alias = "Peer-" + targetPort;
+            ValidatorNode newNode = new ValidatorNode(alias, ip + ":" + targetPort);
             nodes.put(alias, newNode);
 
-            logger.info("Nodo creado: " + alias + " -> " + address);
+            logger.info("Conectando a peer: " + ip + ":" + targetPort);
+        } catch (NumberFormatException e) {
+            logger.error("Puerto invalido");
         } catch (Exception e) {
-            logger.error("Error creando nodo: " + e.getMessage());
+            logger.error("Error conectando nodo: " + e.getMessage());
         }
     }
 
@@ -275,7 +336,8 @@ public class BlockchainTUI {
     }
 
     private void startMining() {
-        if (isMining) return;
+        if (isMining)
+            return;
 
         isMining = true;
         try {
@@ -289,8 +351,12 @@ public class BlockchainTUI {
                             try {
                                 blockchain.minePendingTransactions(activeMiner);
                                 minedBlocksCount++;
+                                Block minedBlock = blockchain.getLatestBlock();
+                                p2pNode.broadcastBlock(minedBlock); // Broadcast P2P
                                 updateAllWalletBalances();
-                                logger.info("Bloque minado. TX pendientes ahora: " + blockchain.pendingTransactions.size());
+                                logger.info(
+                                        "Bloque minado y difundido. TX pendientes ahora: "
+                                                + blockchain.pendingTransactions.size());
                             } catch (Exception e) {
                                 logger.error("Error en mineria: " + e.getMessage());
                                 e.printStackTrace();
@@ -333,7 +399,8 @@ public class BlockchainTUI {
         try {
             screen.clear();
             TerminalSize size = screen.getTerminalSize();
-            if (size == null) return;
+            if (size == null)
+                return;
 
             int width = Math.max(40, size.getColumns());
             int height = Math.max(20, size.getRows());
@@ -353,12 +420,24 @@ public class BlockchainTUI {
 
                 try {
                     switch (currentTab) {
-                        case 0: drawBlockchainTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
-                        case 1: drawWalletsTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
-                        case 2: drawMiningTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
-                        case 3: drawNodesTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
-                        case 4: drawConfigTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
-                        case 5: drawTransactionsTab(1, contentStartY, Math.max(20, width - 2), contentHeight); break;
+                        case 0:
+                            drawBlockchainTab(1, contentStartY, Math.max(20, width - 2), contentHeight);
+                            break;
+                        case 1:
+                            drawWalletsTab(1, contentStartY, Math.max(20, width - 2), contentHeight);
+                            break;
+                        case 2:
+                            drawMiningTab(1, contentStartY, Math.max(20, width - 2), contentHeight);
+                            break;
+                        case 3:
+                            drawNodesTab(1, contentStartY, Math.max(20, width - 2), contentHeight);
+                            break;
+                        case 4:
+                            drawConfigTab(1, contentStartY, Math.max(20, width - 2), contentHeight);
+                            break;
+                        case 5:
+                            drawTransactionsTab(1, contentStartY, Math.max(20, width - 2), contentHeight);
+                            break;
                     }
                 } catch (Exception e) {
                     logger.error("Error dibujando tab: " + e.getMessage());
@@ -412,7 +491,7 @@ public class BlockchainTUI {
         String tabs = "  [1]Blockchain  [2]Wallets  [3]Mineria  [4]Config  [5]Transacciones  ";
         int activeX = 1;
         for (int i = 0; i < TAB_NAMES.length; i++) {
-            String tabLabel = "[" + (i+1) + "]" + TAB_NAMES[i];
+            String tabLabel = "[" + (i + 1) + "]" + TAB_NAMES[i];
             TextColor color = (i == currentTab) ? TextColor.ANSI.WHITE : TextColor.ANSI.BLUE;
             drawLineAt(activeX, 4, tabLabel, color);
             activeX += tabLabel.length() + 2;
@@ -444,7 +523,8 @@ public class BlockchainTUI {
         drawLineAt(x + 2, y + 2, "Alias", TextColor.ANSI.MAGENTA);
         int rowCount = 0;
         for (String alias : wallets.keySet()) {
-            if (rowCount >= height - 5) break;
+            if (rowCount >= height - 5)
+                break;
             drawLineAt(x + 2, y + 3 + rowCount, "• " + alias, TextColor.ANSI.WHITE);
             rowCount++;
         }
@@ -456,7 +536,8 @@ public class BlockchainTUI {
 
         rowCount = 0;
         for (Map.Entry<String, Wallet> e : wallets.entrySet()) {
-            if (rowCount >= height - 5) break;
+            if (rowCount >= height - 5)
+                break;
             float balance = blockchain.getBalance(e.getValue().getAddress());
             String line = String.format("%-14s %10.2f", e.getKey(), balance);
             drawLineAt(rightX, y + 4 + rowCount, line, TextColor.ANSI.WHITE);
@@ -476,7 +557,8 @@ public class BlockchainTUI {
         if (activeMiner != null) {
             String minerAddr = truncate(activeMiner.getAddress(), 30);
             drawLineAt(x + 2, y + 4, "Minero: " + minerAddr, TextColor.ANSI.WHITE);
-            drawLineAt(x + 2, y + 5, "Recompensa total: " + String.format("%.2f", activeMiner.getTotalMined()), TextColor.ANSI.WHITE);
+            drawLineAt(x + 2, y + 5, "Recompensa total: " + String.format("%.2f", activeMiner.getTotalMined()),
+                    TextColor.ANSI.WHITE);
         } else {
             drawLineAt(x + 2, y + 4, "Minero: No iniciado", TextColor.ANSI.WHITE);
             drawLineAt(x + 2, y + 5, "Recompensa total: 0.00", TextColor.ANSI.WHITE);
@@ -486,7 +568,8 @@ public class BlockchainTUI {
         drawLineAt(x + 2, y + 8, "Dificultad: " + blockchain.getDifficulty(), TextColor.ANSI.MAGENTA);
         drawLineAt(x + 2, y + 9, "Recompensa por bloque: " + blockchain.getMiningReward(), TextColor.ANSI.MAGENTA);
 
-        drawLineAt(x + 2, y + height - 3, "Presiona [M] para " + (isMining ? "PAUSAR" : "INICIAR"), TextColor.ANSI.YELLOW);
+        drawLineAt(x + 2, y + height - 3, "Presiona [M] para " + (isMining ? "PAUSAR" : "INICIAR"),
+                TextColor.ANSI.YELLOW);
     }
 
     private void drawNodesTab(int x, int y, int width, int height) throws IOException {
@@ -498,8 +581,10 @@ public class BlockchainTUI {
 
         int rowCount = 0;
         for (ValidatorNode node : nodes.values()) {
-            if (rowCount >= height - 5) break;
-            String line = String.format("%-20s %-25s %s", node.getAlias(), node.getAddress(), node.isActive() ? "Activo" : "Inactivo");
+            if (rowCount >= height - 5)
+                break;
+            String line = String.format("%-20s %-25s %s", node.getAlias(), node.getAddress(),
+                    node.isActive() ? "Activo" : "Inactivo");
             drawLineAt(x + 2, y + 4 + rowCount, line, TextColor.ANSI.WHITE);
             rowCount++;
         }
@@ -536,21 +621,24 @@ public class BlockchainTUI {
         int rowCount = 0;
         for (Block block : blockchain.getChain()) {
             for (Transaction tx : block.getTransactions()) {
-                if (rowCount >= height - 5) break;
+                if (rowCount >= height - 5)
+                    break;
                 String from = tx.fromAddress == null ? "SISTEMA" : truncate(tx.fromAddress, 8);
                 String to = truncate(tx.toAddress, 8);
                 String line = String.format("%-12s %-12s %8.2f", from, to, tx.amount);
                 drawLineAt(x + 2, y + 3 + rowCount, line, TextColor.ANSI.WHITE);
                 rowCount++;
             }
-            if (rowCount >= height - 5) break;
+            if (rowCount >= height - 5)
+                break;
         }
 
         // Pendiente
         drawLineAt(x + leftWidth + 4, y + 2, "De           Para         Monto", TextColor.ANSI.YELLOW);
         rowCount = 0;
         for (Transaction tx : blockchain.pendingTransactions) {
-            if (rowCount >= height - 5) break;
+            if (rowCount >= height - 5)
+                break;
             String from = tx.fromAddress == null ? "SISTEMA" : truncate(tx.fromAddress, 8);
             String to = truncate(tx.toAddress, 8);
             String line = String.format("%-12s %-12s %8.2f", from, to, tx.amount);
@@ -571,7 +659,8 @@ public class BlockchainTUI {
         List<String> logs = logger.getLastLogs(height - 2);
         int idx = 0;
         for (String log : logs) {
-            if (idx >= height - 2) break;
+            if (idx >= height - 2)
+                break;
             drawLineAt(x + 2, y + 1 + idx, truncate(log, width - 4), TextColor.ANSI.CYAN);
             idx++;
         }
@@ -607,16 +696,19 @@ public class BlockchainTUI {
 
     private void drawLineAt(int x, int y, String text, TextColor color) throws IOException {
         try {
-            if (text == null || text.isEmpty()) return;
+            if (text == null || text.isEmpty())
+                return;
 
             TerminalSize size = screen.getTerminalSize();
-            if (size == null) return;
+            if (size == null)
+                return;
 
             int maxX = size.getColumns();
             int maxY = size.getRows();
 
             // Validar coordenadas
-            if (x < 0 || y < 0 || x >= maxX || y >= maxY) return;
+            if (x < 0 || y < 0 || x >= maxX || y >= maxY)
+                return;
 
             // Escribir solo caracteres validos dentro de los limites
             for (int i = 0; i < text.length() && (x + i) < maxX; i++) {
@@ -630,13 +722,14 @@ public class BlockchainTUI {
     }
 
     private String truncate(String s, int len) {
-        return (s == null) ? "" : s.length() > len ? s.substring(0, Math.max(0, len - 2)) + ".." : s;
+        return utils.GUIUtils.truncate(s, len);
     }
 
     private String buildStateHash() {
         StringBuilder sb = new StringBuilder();
         sb.append(blockchain.getChain().size()).append("|");
-        for (Wallet w : wallets.values()) sb.append(blockchain.getBalance(w.getAddress())).append(",");
+        for (Wallet w : wallets.values())
+            sb.append(blockchain.getBalance(w.getAddress())).append(",");
         sb.append("|").append(blockchain.pendingTransactions.size());
         sb.append("|").append(currentTab).append("|").append(isMining);
         sb.append("|").append(logger.getLogs().size());
@@ -648,7 +741,8 @@ public class BlockchainTUI {
     private void showStats() {
         logger.info("════════════ ESTADISTICAS ════════════");
         logger.info("Bloques: " + blockchain.getChain().size());
-        logger.info("TX Confirmadas: " + blockchain.getChain().stream().mapToInt(b -> b.getTransactions().size()).sum());
+        logger.info(
+                "TX Confirmadas: " + blockchain.getChain().stream().mapToInt(b -> b.getTransactions().size()).sum());
         logger.info("TX Pendientes: " + blockchain.pendingTransactions.size());
         logger.info("Dificultad: " + blockchain.getDifficulty());
         logger.info("Recompensa: " + blockchain.getMiningReward());
@@ -677,4 +771,3 @@ public class BlockchainTUI {
         logger.info("Wallet anadida: " + alias);
     }
 }
-

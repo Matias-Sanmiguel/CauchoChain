@@ -9,8 +9,17 @@ public class BlockchainTUIDemo {
         try {
             Logger logger = Logger.getInstance();
 
+            int port = 5000;
+            if (args.length > 0) {
+                try {
+                    port = Integer.parseInt(args[0]);
+                } catch (NumberFormatException e) {
+                    System.err.println("Puerto invalido, usando default: 5000");
+                }
+            }
+
             Blockchain bc = new Blockchain();
-            BlockchainTUI tui = new BlockchainTUI(bc);
+            BlockchainTUI tui = new BlockchainTUI(bc, port);
 
             Wallet juan = new Wallet("juan");
             Wallet pancho = new Wallet("pancho");
@@ -22,11 +31,7 @@ public class BlockchainTUIDemo {
 
             logger.info("Sistema iniciado. Preparando blockchain...");
 
-            Transaction genesisReward = new Transaction(null, juan.getAddress(), 100.0f);
-            bc.pendingTransactions.add(genesisReward);
-            bc.txPool.addTransaction(genesisReward);
-
-            logger.info("Presiona [M] para minar el bloque génesis");
+            logger.info("Presiona [M] para minar el primer bloque");
 
             tui.start();
 
