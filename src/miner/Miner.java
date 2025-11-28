@@ -69,7 +69,8 @@ public class Miner implements IMiner {
             throw new RuntimeException("El bloque minado no es válido.");
         }
 
-        bc.getChain().add(newBlock);
+        // Usar addBlock() para que se haga el broadcast automáticamente
+        bc.addBlock(newBlock);
         bc.txPool.removeTransactions(transactionsToMine);
         bc.pendingTransactions.removeAll(transactionsToMine);
 

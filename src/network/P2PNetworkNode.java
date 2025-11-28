@@ -179,11 +179,32 @@ public class P2PNetworkNode implements INetworkNode {
                 // Validate and add block
                 // Simple check: is it the next block?
                 if (block.getPrevHash().equals(blockchain.getLatestBlock().getHash())) {
-                    blockchain.addBlock(block);
-                    logger.info("Bloque recibido y añadido a la cadena: #" + block.getIndex());
+                    // Agregar el bloque directamente a la cadena sin hacer broadcast
+                    // para evitar loops infinitos (el nodo que minó ya hizo el broadcast)
+                    List<Block> chain = blockchain.getChain();
+
+                    // Validar estructura del bloque antes de agregarlo
+                    if (model.BlockValidator.validateBlockStructure(block)) {
+                        chain.add(block);
+                        logger.info("Bloque recibido y añadido a la cadena: #" + block.getIndex());
+
+                        // Remover transacciones del pool que ya están en el bloque
+                        blockchain.txPool.removeTransactions(block.getTransactions());
+                        blockchain.pendingTransactions.removeAll(block.getTransactions());
+                    } else {
+                        logger.warning("Bloque recibido tiene estructura inválida.");
+                    }
                 } else {
                     logger.warning("Bloque recibido no encaja en la cadena local.");
-                    // Here we would trigger a chain sync (CHAIN_REQUEST)
+                    // Solicitar sincronización de cadena completa
+                    if (responder != null) {
+                        try {
+                            responder.writeObject(new NetworkMessage(NetworkMessage.Type.CHAIN_REQUEST, null));
+                            responder.flush();
+                        } catch (IOException e) {
+                            logger.error("Error solicitando cadena: " + e.getMessage());
+                        }
+                    }
                 }
                 break;
 

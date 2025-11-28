@@ -39,6 +39,8 @@ public class BlockchainTUI {
         this.port = port;
         this.logger = Logger.getInstance();
         this.p2pNode = new P2PNetworkNode("Node-" + port, port, blockchain);
+        // Registrar el nodo P2P en la blockchain para que los broadcasts funcionen
+        blockchain.addNode(p2pNode);
     }
 
     public void start() throws IOException {
@@ -351,8 +353,7 @@ public class BlockchainTUI {
                             try {
                                 blockchain.minePendingTransactions(activeMiner);
                                 minedBlocksCount++;
-                                Block minedBlock = blockchain.getLatestBlock();
-                                p2pNode.broadcastBlock(minedBlock); // Broadcast P2P
+                                // El broadcast se hace automáticamente en blockchain.addBlock()
                                 updateAllWalletBalances();
                                 logger.info(
                                         "Bloque minado y difundido. TX pendientes ahora: "
