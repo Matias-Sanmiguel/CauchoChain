@@ -38,7 +38,6 @@ public class P2PNetworkNode implements INetworkNode {
 
     @Override
     public void connect() {
-        // Start the server thread to listen for incoming connections
         new Thread(this::startServer).start();
     }
 
@@ -77,16 +76,12 @@ public class P2PNetworkNode implements INetworkNode {
 
             peers.add(out);
 
-            // Start a thread to listen to this peer
             new Thread(() -> listenToPeer(in, out, socket)).start();
 
-            // Solicitar la cadena al conectarse
             out.writeObject(new NetworkMessage(NetworkMessage.Type.CHAIN_REQUEST, null));
             out.flush();
 
-            // Send a PING or initial handshake if needed
-            // out.writeObject(new NetworkMessage(NetworkMessage.Type.PING, "Hello from " +
-            // id));
+
 
         } catch (IOException e) {
             logger.error("Error registrando peer: " + e.getMessage());
@@ -103,8 +98,6 @@ public class P2PNetworkNode implements INetworkNode {
             }
         } catch (IOException | ClassNotFoundException e) {
             logger.warning("Peer desconectado: " + socket.getInetAddress());
-            // Remove peer from list (would need more robust management to remove the
-            // specific output stream)
         }
     }
 
@@ -164,8 +157,7 @@ public class P2PNetworkNode implements INetworkNode {
         switch (msg.getType()) {
             case TRANSACTION:
                 Transaction tx = (Transaction) msg.getPayload();
-                // Avoid infinite loops or reprocessing known txs
-                // In a real system, we check if we already have it in the pool
+
                 try {
                     blockchain.addTransactionToPool(tx);
                     logger.info("Transacción recibida y añadida al pool.");
@@ -176,8 +168,6 @@ public class P2PNetworkNode implements INetworkNode {
 
             case BLOCK:
                 Block block = (Block) msg.getPayload();
-                // Validate and add block
-                // Simple check: is it the next block?
                 if (block.getPrevHash().equals(blockchain.getLatestBlock().getHash())) {
                     // Agregar el bloque directamente a la cadena sin hacer broadcast
                     // para evitar loops infinitos (el nodo que minó ya hizo el broadcast)
