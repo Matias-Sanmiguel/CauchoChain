@@ -24,7 +24,7 @@ public class TransactionPanel extends JPanel {
 
         JPanel tablesPanel = new JPanel(new GridLayout(2, 1));
 
-        String[] columnNames = {"De", "Para", "Monto", "Estado"};
+        String[] columnNames = { "De", "Para", "Monto", "Estado" };
         pendingTable = new JTable(new Object[0][4], columnNames);
         JScrollPane pendingScroll = new JScrollPane(pendingTable);
         JPanel pendingPanel = new JPanel(new BorderLayout());
@@ -56,11 +56,10 @@ public class TransactionPanel extends JPanel {
         float avgPerBlock = calculateAvgTransactionsPerBlock();
 
         statsLabel.setText(String.format(
-            "<html>Total Transacciones: %d | " +
-            "Promedio por Bloque: %.2f | " +
-            "Monto Total: %.2f</html>",
-            totalTx, avgPerBlock, totalAmount
-        ));
+                "<html>Total Transacciones: %d | " +
+                        "Promedio por Bloque: %.2f | " +
+                        "Monto Total: %.2f</html>",
+                totalTx, avgPerBlock, totalAmount));
     }
 
     private float calculateTotalAmount() {
@@ -73,7 +72,8 @@ public class TransactionPanel extends JPanel {
     }
 
     private float calculateAvgTransactionsPerBlock() {
-        if (blockchain.getChain().isEmpty()) return 0;
+        if (blockchain.getChain().isEmpty())
+            return 0;
         int totalTx = 0;
         for (var block : blockchain.getChain()) {
             totalTx += block.getTransactions().size();
@@ -86,33 +86,31 @@ public class TransactionPanel extends JPanel {
         Object[][] pendingData = new Object[pending.size()][4];
         for (int i = 0; i < pending.size(); i++) {
             Transaction tx = pending.get(i);
-            pendingData[i] = new Object[]{
-                tx.fromAddress != null ? truncate(tx.fromAddress, 15) : "SISTEMA",
-                truncate(tx.toAddress, 15),
-                String.format("%.2f", tx.amount),
-                "Pendiente"
+            pendingData[i] = new Object[] {
+                    tx.fromAddress != null ? truncate(tx.fromAddress, 15) : "SISTEMA",
+                    truncate(tx.toAddress, 15),
+                    String.format("%.2f", tx.amount),
+                    "Pendiente"
             };
         }
         pendingTable.setModel(new javax.swing.table.DefaultTableModel(
-            pendingData,
-            new String[]{"De", "Para", "Monto", "Estado"}
-        ));
+                pendingData,
+                new String[] { "De", "Para", "Monto", "Estado" }));
 
         List<Transaction> confirmed = getConfirmedTransactions();
         Object[][] confirmedData = new Object[confirmed.size()][4];
         for (int i = 0; i < confirmed.size(); i++) {
             Transaction tx = confirmed.get(i);
-            confirmedData[i] = new Object[]{
-                tx.fromAddress != null ? truncate(tx.fromAddress, 15) : "SISTEMA",
-                truncate(tx.toAddress, 15),
-                String.format("%.2f", tx.amount),
-                "Confirmada"
+            confirmedData[i] = new Object[] {
+                    tx.fromAddress != null ? truncate(tx.fromAddress, 15) : "SISTEMA",
+                    truncate(tx.toAddress, 15),
+                    String.format("%.2f", tx.amount),
+                    "Confirmada"
             };
         }
         confirmedTable.setModel(new javax.swing.table.DefaultTableModel(
-            confirmedData,
-            new String[]{"De", "Para", "Monto", "Estado"}
-        ));
+                confirmedData,
+                new String[] { "De", "Para", "Monto", "Estado" }));
 
         updateStats();
     }
@@ -126,8 +124,6 @@ public class TransactionPanel extends JPanel {
     }
 
     private String truncate(String s, int len) {
-        if (s == null) return "";
-        return s.length() > len ? s.substring(0, len - 2) + ".." : s;
+        return utils.GUIUtils.truncate(s, len);
     }
 }
-

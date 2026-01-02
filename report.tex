@@ -1,0 +1,205 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[spanish]{babel}
+\usepackage{graphicx}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{geometry}
+
+\geometry{top=2.5cm, bottom=2.5cm, left=2.5cm, right=2.5cm}
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},   
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{codepurple},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,         
+    breaklines=true,                 
+    captionpos=b,                    
+    keepspaces=true,                 
+    numbers=left,                    
+    numbersep=5pt,                  
+    showspaces=false,                
+    showstringspaces=false,
+    showtabs=false,                  
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+\title{Informe de Proyecto: CauchoChain}
+\author{Matias Sanmiguel}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Parte 1 - Sistema Actual}
+
+\subsection{Problemática Abordada}
+La tecnología Blockchain ha revolucionado la forma en que concebimos la seguridad y la descentralización en los sistemas digitales. Sin embargo, comprender sus mecanismos internos (hashing, pruebas de trabajo, gestión de transacciones) puede resultar complejo sin una implementación práctica. La problemática abordada en este proyecto es la necesidad de un sistema educativo y funcional que permita visualizar y operar una cadena de bloques básica, permitiendo entender cómo se aseguran los datos y cómo interactúan los distintos componentes (billeteras, mineros, cadena) en un entorno controlado.
+
+\subsection{Propuesta de Solución}
+Se propone el desarrollo de \textbf{CauchoChain}, una aplicación basada en Java que simula el funcionamiento de una criptomoneda. El sistema permite la creación de billeteras, la generación de transacciones firmadas digitalmente y el minado de bloques mediante el algoritmo de consenso Proof of Work (PoW). Esta solución proporciona una interfaz (TUI/GUI) para interactuar con la cadena, ofreciendo una visión clara del estado del ledger distribuido.
+
+\subsection{Objetivos}
+\begin{itemize}
+    \item Implementar la estructura de datos fundamental de una Blockchain (Bloques, Transacciones, Cadena).
+    \item Desarrollar un mecanismo de consenso Proof of Work para asegurar la integridad de la red.
+    \item Implementar criptografía asimétrica (RSA/ECDSA) para la firma y validación de transacciones.
+    \item Aplicar principios de diseño de software (SOLID, GRASP) para garantizar un código mantenible y extensible.
+    \item Proveer una interfaz de usuario para la operación del sistema.
+\end{itemize}
+
+\subsection{Explicación del Desarrollo Realizado}
+El desarrollo se llevó a cabo utilizando el lenguaje de programación Java, aprovechando su tipado fuerte y orientación a objetos. La arquitectura del proyecto se dividió en paquetes modulares:
+\begin{itemize}
+    \item \texttt{model}: Contiene las entidades principales como \texttt{Block}, \texttt{Transaction}, y \texttt{Blockchain}.
+    \item \texttt{miner}: Encapsula la lógica de minado y prueba de trabajo.
+    \item \texttt{wallet}: Gestiona las claves criptográficas y la creación de transacciones.
+    \item \texttt{utils}: Utilidades transversales como \texttt{CryptoUtils} para hashing y firmas.
+\end{itemize}
+
+\subsection{Funcionalidad Implementada}
+El sistema actual (rama main) cuenta con las siguientes funcionalidades:
+\begin{itemize}
+    \item \textbf{Gestión de Billeteras}: Creación de pares de claves pública/privada.
+    \item \textbf{Transacciones}: Envío de fondos entre billeteras, con validación de firmas y saldo suficiente.
+    \item \textbf{Minería}: Resolución de acertijos criptográficos (PoW) para agregar nuevos bloques a la cadena y obtener recompensas.
+    \item \textbf{Validación}: Verificación automática de la integridad de la cadena (hashes y enlaces previos).
+\end{itemize}
+
+\subsection{Diagramas UML}
+\textit{(Diagramas de Clases y Secuencia provistos externamente)}
+
+\subsection{Capturas de Pantalla de la Interfaz de Usuario}
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{screenshot_main.png}
+    \caption{Interfaz principal del sistema (Placeholder)}
+    \label{fig:main_ui}
+\end{figure}
+\textit{Nota: Insertar aquí las capturas de la versión actual.}
+
+\subsection{Principios SOLID y GRASP Aplicados}
+\begin{itemize}
+    \item \textbf{Single Responsibility Principle (SRP)}: La clase \texttt{Block} se encarga únicamente de mantener la estructura de datos del bloque, mientras que \texttt{Miner} se encarga exclusivamente de la lógica de minado. \texttt{CryptoUtils} centraliza las operaciones criptográficas.
+    \item \textbf{Creator (GRASP)}: La clase \texttt{Miner} es responsable de crear instancias de \texttt{Block} cuando encuentra un hash válido (método \texttt{mine}).
+    \item \textbf{Controller (GRASP)}: La clase \texttt{Blockchain} (o \texttt{BlockchainTUI} en la capa de presentación) actúa como controlador, coordinando las operaciones entre el usuario y el modelo de datos.
+    \item \textbf{High Cohesion}: Las clases relacionadas con la red y la minería están separadas en sus propios paquetes, manteniendo alta cohesión dentro de cada módulo.
+\end{itemize}
+
+\newpage
+
+\section{Parte 2 - Mejora Propuesta}
+
+\subsection{Descripción de la Mejora y Justificación}
+La mejora propuesta consiste en la implementación de una capa de red \textbf{Peer-to-Peer (P2P)}. 
+\\
+\textbf{Justificación}: Una blockchain local (como la implementada en la Parte 1) carece de la característica más importante de esta tecnología: la descentralización. Al introducir una red P2P, permitimos que múltiples nodos (instancias de la aplicación) se comuniquen, compartan transacciones y bloques, y mantengan una copia sincronizada del ledger. Esto aumenta la seguridad, la disponibilidad y la resistencia a la censura del sistema, acercándolo a una implementación real.
+
+\subsection{Nueva Funcionalidad Incorporada}
+\begin{itemize}
+    \item \textbf{Conexión entre Nodos}: Capacidad de conectarse a otros pares mediante Sockets TCP.
+    \item \textbf{Difusión (Broadcast)}: Propagación automática de nuevas transacciones y bloques minados a todos los nodos conectados.
+    \item \textbf{Sincronización de Cadena}: Mecanismo para solicitar y recibir la cadena de bloques más larga al conectarse a la red.
+    \item \textbf{Servidor Multihilo}: Manejo de múltiples conexiones entrantes y salientes simultáneamente.
+\end{itemize}
+
+\subsection{Nuevo Diagrama UML}
+\textit{(Diagramas estructurales actualizados provistos externamente)}
+
+\subsection{Fragmentos de Código con las Mejoras}
+
+A continuación se muestran fragmentos clave de la clase \texttt{P2PNetworkNode.java} que implementan la lógica de red.
+
+\subsubsection{Conexión a Pares}
+Este método permite a un nodo iniciar una conexión saliente hacia otro nodo conocido.
+
+\begin{lstlisting}[language=Java]
+public void connectToPeer(String host, int port) {
+    try {
+        Socket socket = new Socket(host, port);
+        registerPeer(socket);
+        logger.info("Conectado a peer: " + host + ":" + port);
+    } catch (IOException e) {
+        logger.error("Error conectando a peer " + host + ":" + port);
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Difusión de Mensajes (Broadcast)}
+Método para enviar mensajes (bloques o transacciones) a todos los pares conectados.
+
+\begin{lstlisting}[language=Java]
+private void broadcast(NetworkMessage msg) {
+    List<ObjectOutputStream> failedPeers = new ArrayList<>();
+
+    synchronized (peers) {
+        for (ObjectOutputStream out : peers) {
+            try {
+                out.writeObject(msg);
+                out.flush();
+            } catch (IOException e) {
+                logger.error("Error enviando mensaje a peer: " + e.getMessage());
+                failedPeers.add(out);
+            }
+        }
+        peers.removeAll(failedPeers);
+    }
+}
+\end{lstlisting}
+
+\subsubsection{Recepción y Procesamiento de Mensajes}
+Lógica para manejar los distintos tipos de mensajes recibidos (Bloques, Transacciones, Solicitudes de Cadena).
+
+\begin{lstlisting}[language=Java]
+public void onReceiveMessage(NetworkMessage msg, ObjectOutputStream responder, String from) {
+    switch (msg.getType()) {
+        case TRANSACTION:
+            Transaction tx = (Transaction) msg.getPayload();
+            blockchain.addTransactionToPool(tx);
+            break;
+
+        case BLOCK:
+            Block block = (Block) msg.getPayload();
+            if (block.getPrevHash().equals(blockchain.getLatestBlock().getHash())) {
+                blockchain.addBlock(block);
+            } else {
+                // Solicitar sincronizacion si el bloque no encaja
+            }
+            break;
+
+        case CHAIN_REQUEST:
+            if (responder != null) {
+                // Enviar cadena actual
+                List<Block> currentChain = new ArrayList<>(blockchain.getChain());
+                responder.writeObject(new NetworkMessage(NetworkMessage.Type.CHAIN_RESPONSE, currentChain));
+            }
+            break;
+    }
+}
+\end{lstlisting}
+
+\subsection{Capturas de Pantalla de las Nuevas Funcionalidades}
+\begin{figure}[h]
+    \centering
+    % \includegraphics[width=0.8\textwidth]{screenshot_p2p_nodes.png}
+    \caption{Consola mostrando la conexión entre múltiples nodos y sincronización.}
+    \label{fig:p2p_nodes}
+\end{figure}
+\textit{Nota: Insertar aquí capturas mostrando logs de conexión o múltiples terminales interactuando.}
+
+\end{document}

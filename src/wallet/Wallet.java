@@ -1,4 +1,5 @@
 package wallet;
+
 import java.util.UUID;
 import model.Blockchain;
 import model.Transaction;
@@ -16,11 +17,13 @@ public class Wallet extends WalletBase implements IWallet {
 	private float cachedBalance = 0.0f;
 
 	public Wallet(String alias) {
+		super(alias); // Use alias as seed for deterministic keys
 		this.alias = alias;
 	}
 
 	// Constructor que enlaza la wallet con un User
 	public Wallet(String alias, User owner) {
+		super(alias);
 		this.alias = alias;
 		if (owner != null) {
 			this.ownerId = owner.getUserId();
@@ -33,7 +36,8 @@ public class Wallet extends WalletBase implements IWallet {
 		return alias;
 	}
 
-	// Usar getAddress() de WalletBase para obtener la dirección real basada en la clave pública
+	// Usar getAddress() de WalletBase para obtener la dirección real basada en la
+	// clave pública
 
 	public void setAlias(String alias) {
 		this.alias = alias;
@@ -43,7 +47,6 @@ public class Wallet extends WalletBase implements IWallet {
 		return ownerId;
 	}
 
-
 	@Override
 	public float getBalance(Blockchain bc) {
 		if (bc == null) {
@@ -52,9 +55,9 @@ public class Wallet extends WalletBase implements IWallet {
 		cachedBalance = bc.getBalance(this.getAddress());
 		return cachedBalance;
 	}
-    //  Devuelve el balance consultando la cadena (Blockchain) y actualiza cachedBalance.
-    //  Si la blockchain es null, devuelve el valor en caché.
-
+	// Devuelve el balance consultando la cadena (Blockchain) y actualiza
+	// cachedBalance.
+	// Si la blockchain es null, devuelve el valor en caché.
 
 	@Override
 	public Transaction createTransaction(String to, float amt, Blockchain bc) {
@@ -68,8 +71,7 @@ public class Wallet extends WalletBase implements IWallet {
 
 		Transaction tx = new Transaction(this.getAddress(), to, amt);
 
-
-        // firma la transaccion con el keypar de la wallet
+		// firma la transaccion con el keypar de la wallet
 		try {
 			java.security.KeyPair kp = getKeyPair();
 			tx.signTransaction(kp);
@@ -77,7 +79,7 @@ public class Wallet extends WalletBase implements IWallet {
 			// Si falla la firma, lanzar para que el llamador sepa
 			throw new RuntimeException("Error al firmar la transacción: " + e.getMessage(), e);
 		}
-	
+
 		return tx;
 	}
 

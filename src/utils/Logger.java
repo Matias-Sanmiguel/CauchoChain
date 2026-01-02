@@ -1,7 +1,6 @@
 package utils;
 
 import utils.dao.ILogDAO;
-import utils.dao.RedisLogDAO;
 import utils.dao.LocalLogDAO;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,18 +18,9 @@ public class Logger {
         this.logFile = "logs/blockchain_" + System.currentTimeMillis() + ".log";
         this.formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
 
-        RedisLogDAO redisDAO = new RedisLogDAO();
-
-        if (redisDAO.isAvailable()) {
-            this.logDAO = redisDAO;
-            this.fallbackDAO = new LocalLogDAO();
-            System.out.println("[Logger] Usando RedisLogDAO como almacenamiento principal");
-        } else {
-            redisDAO.close();
-            this.logDAO = new LocalLogDAO();
-            this.fallbackDAO = null;
-            System.out.println("[Logger] Usando LocalLogDAO (Redis no disponible)");
-        }
+        this.logDAO = new LocalLogDAO();
+        this.fallbackDAO = null;
+        System.out.println("[Logger] Usando LocalLogDAO (Redis deshabilitado)");
     }
 
     public Logger(ILogDAO logDAO) {

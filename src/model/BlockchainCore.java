@@ -1,7 +1,9 @@
 package model;
+
 import java.util.ArrayList;
 import java.util.List;
 import network.INetworkNode;
+import model.BlockValidator;
 
 public abstract class BlockchainCore {
 
@@ -10,18 +12,15 @@ public abstract class BlockchainCore {
     private float reward;
     private List<INetworkNode> nodes;
 
-
     public BlockchainCore() {
         this.chain = new ArrayList<>();
         this.nodes = new ArrayList<>();
         this.difficulty = 2;
         this.reward = 50f;
 
-
         Block genesis = new Block(0, new ArrayList<>(), "0", "GENESIS", 0L);
         chain.add(genesis);
     }
-
 
     // agregar el bloque con todos los chequeos
     public void addBlock(Block newBlock) {
@@ -39,16 +38,9 @@ public abstract class BlockchainCore {
             return;
         }
 
-        // validar si las transacciones son balidas
-        if (!newBlock.hasValidTransactions()) {
-            System.out.println("Error: transacciones inválidas en el bloque.");
-            return;
-        }
-
-        // ver si es valido el bloque
-        String recalculated = newBlock.calculateHash();
-        if (!recalculated.equals(newBlock.getHash())) {
-            System.out.println("Error: hash inválido para el bloque.");
+        // validar si las transacciones son balidas y estructura basica
+        if (!BlockValidator.validateBlockStructure(newBlock)) {
+            System.out.println("Error: bloque inválido (hash o transacciones).");
             return;
         }
 
@@ -56,33 +48,21 @@ public abstract class BlockchainCore {
         chain.add(newBlock);
         System.out.println("Bloque agregado correctamente con hash: " + newBlock.getHash());
 
-        //️⃣ sincronizar
+        // ️⃣ sincronizar
         broadcastBlock(newBlock);
     }
-
 
     public Block getLastBlock() {
         return chain.get(chain.size() - 1);
     }
 
- // validar si la cadena esta bien
+    // validar si la cadena esta bien
     public boolean validateChain() {
         for (int i = 1; i < chain.size(); i++) {
             Block current = chain.get(i);
-            Block previous = chain.get(i - 1);
 
-            if (!current.getHash().equals(current.calculateHash())) {
-                System.out.println("Error: hash incorrecto en bloque " + i);
-                return false;
-            }
-
-            if (!current.getPrevHash().equals(previous.getHash())) {
-                System.out.println("Error: hash previo incorrecto en bloque " + i);
-                return false;
-            }
-
-            if (!current.hasValidTransactions()) {
-                System.out.println("Error: transacciones inválidas en bloque " + i);
+            if (!BlockValidator.validateBlockStructure(current)) {
+                System.out.println("Error: bloque inválido en posición " + i);
                 return false;
             }
         }
@@ -101,7 +81,8 @@ public abstract class BlockchainCore {
 
     // conecta los nodos
     public void broadcastBlock(Block b) {
-        if (nodes.isEmpty()) return;
+        if (nodes.isEmpty())
+            return;
 
         System.out.println("Difundiendo bloque " + b.getHash() + " a la red...");
         for (INetworkNode n : nodes) {
@@ -121,5 +102,31 @@ public abstract class BlockchainCore {
 
     public List<Block> getChain() {
         return chain;
+    }
+
+    public void replaceChain(List<Block> newChain) {
+        if (newChain.size() > chain.size()) {
+            // Validar la nueva cadena completa
+            // (Aqui podriamos usar validateChain() pero adaptado para recibir una lista,
+            // por ahora asumimos que si la estructura es valida, confiamos)
+            // En produccion deberiamos validar hash por hash y prevHash.
+
+            // Validacion basica
+            for (int i = 1; i < newChain.size(); i++) {
+                Block current = newChain.get(i);
+                Block prev = newChain.get(i - 1);
+                if (!current.getPrevHash().equals(prev.getHash())) {
+                    System.out.println("Cadena recibida invalida: hashes no coinciden");
+                    return;
+                }
+                if (!BlockValidator.validateBlockStructure(current)) {
+                    System.out.println("Cadena recibida invalida: bloque invalido");
+                    return;
+                }
+            }
+
+            this.chain = new ArrayList<>(newChain);
+            System.out.println("Cadena reemplazada por una mas larga y valida. Nueva longitud: " + chain.size());
+        }
     }
 }

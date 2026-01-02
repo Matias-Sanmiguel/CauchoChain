@@ -30,8 +30,8 @@ public class WalletPanel extends JPanel {
         this.wallets = new ArrayList<>();
 
         // Inicializar modelos de tabla primero
-        String[] walletColumns = {"Dirección", "Alias", "Saldo"};
-        String[] txColumns = {"De", "Para", "Monto", "Estado"};
+        String[] walletColumns = { "Dirección", "Alias", "Saldo" };
+        String[] txColumns = { "De", "Para", "Monto", "Estado" };
         this.walletsTableModel = new DefaultTableModel(walletColumns, 0);
         this.transactionsTableModel = new DefaultTableModel(txColumns, 0);
 
@@ -82,10 +82,9 @@ public class WalletPanel extends JPanel {
 
         // Layout principal
         JSplitPane splitPane = new JSplitPane(
-            JSplitPane.HORIZONTAL_SPLIT,
-            leftPanel,
-            rightPanel
-        );
+                JSplitPane.HORIZONTAL_SPLIT,
+                leftPanel,
+                rightPanel);
         splitPane.setDividerLocation(400);
         add(splitPane, BorderLayout.CENTER);
 
@@ -123,11 +122,10 @@ public class WalletPanel extends JPanel {
     private void createNewWallet() {
         // Mostrar diálogo para ingresar el alias
         String alias = JOptionPane.showInputDialog(
-            this,
-            "Ingrese un alias para la nueva wallet:",
-            "Crear Nueva Wallet",
-            JOptionPane.PLAIN_MESSAGE
-        );
+                this,
+                "Ingrese un alias para la nueva wallet:",
+                "Crear Nueva Wallet",
+                JOptionPane.PLAIN_MESSAGE);
 
         // Verificar si el usuario canceló o ingresó un alias vacío
         if (alias == null || alias.trim().isEmpty()) {
@@ -138,11 +136,10 @@ public class WalletPanel extends JPanel {
         for (Wallet w : wallets) {
             if (w.getAlias().equals(alias.trim())) {
                 JOptionPane.showMessageDialog(
-                    this,
-                    "El alias ya está en uso. Por favor elija otro.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE
-                );
+                        this,
+                        "El alias ya está en uso. Por favor elija otro.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
         }
@@ -153,11 +150,10 @@ public class WalletPanel extends JPanel {
         updateTransactionsList();
 
         JOptionPane.showMessageDialog(
-            this,
-            "Wallet creada exitosamente con alias: " + alias,
-            "Wallet Creada",
-            JOptionPane.INFORMATION_MESSAGE
-        );
+                this,
+                "Wallet creada exitosamente con alias: " + alias,
+                "Wallet Creada",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void updateWalletsList() {
@@ -168,7 +164,7 @@ public class WalletPanel extends JPanel {
         for (Wallet wallet : wallets) {
             String address = wallet.getAddress();
             Vector<Object> row = new Vector<>();
-            row.add(address);  // Dirección completa de la wallet
+            row.add(address); // Dirección completa de la wallet
             row.add(wallet.getAlias());
             row.add(String.format("%.2f", wallet.getBalance(blockchain)));
             walletsTableModel.addRow(row);
@@ -186,8 +182,8 @@ public class WalletPanel extends JPanel {
 
             if (fromIndex < 0 || toIndex < 0 || fromIndex >= wallets.size() || toIndex >= wallets.size()) {
                 JOptionPane.showMessageDialog(this,
-                    "Por favor selecciona carteras válidas",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                        "Por favor selecciona carteras válidas",
+                        "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -200,14 +196,16 @@ public class WalletPanel extends JPanel {
 
             // Encontrar las wallets correspondientes
             for (Wallet w : wallets) {
-                if (w.getAlias().equals(fromAlias)) fromWallet = w;
-                if (w.getAlias().equals(toAlias)) toWallet = w;
+                if (w.getAlias().equals(fromAlias))
+                    fromWallet = w;
+                if (w.getAlias().equals(toAlias))
+                    toWallet = w;
             }
 
             if (fromWallet == null || toWallet == null) {
                 JOptionPane.showMessageDialog(this,
-                    "Error al encontrar las wallets seleccionadas",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                        "Error al encontrar las wallets seleccionadas",
+                        "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -215,15 +213,15 @@ public class WalletPanel extends JPanel {
 
             if (fromWallet == toWallet) {
                 JOptionPane.showMessageDialog(this,
-                    "No puedes enviar a la misma wallet",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                        "No puedes enviar a la misma wallet",
+                        "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             if (amount <= 0) {
                 JOptionPane.showMessageDialog(this,
-                    "El monto debe ser mayor a 0",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+                        "El monto debe ser mayor a 0",
+                        "Error", JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
@@ -232,8 +230,8 @@ public class WalletPanel extends JPanel {
             blockchain.createTransaction(tx);
 
             JOptionPane.showMessageDialog(this,
-                "Transacción enviada correctamente",
-                "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    "Transacción enviada correctamente",
+                    "Éxito", JOptionPane.INFORMATION_MESSAGE);
 
             amountField.setText("");
 
@@ -245,12 +243,12 @@ public class WalletPanel extends JPanel {
 
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(this,
-                "Por favor ingresa un monto válido",
-                "Error", JOptionPane.ERROR_MESSAGE);
+                    "Por favor ingresa un monto válido",
+                    "Error", JOptionPane.ERROR_MESSAGE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
-                "Error al enviar: " + e.getMessage(),
-                "Error", JOptionPane.ERROR_MESSAGE);
+                    "Error al enviar: " + e.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -271,13 +269,14 @@ public class WalletPanel extends JPanel {
     }
 
     private String getAliasForAddress(String address) {
-        if (address == null) return "SISTEMA";
+        if (address == null)
+            return "SISTEMA";
         for (Wallet w : wallets) {
             if (w.getAddress().equals(address)) {
                 return w.getAlias();
             }
         }
-        return address.substring(0, 8) + "...";
+        return utils.GUIUtils.truncate(address, 11);
     }
 
     private void addTransactionToTable(Transaction tx, String status) {

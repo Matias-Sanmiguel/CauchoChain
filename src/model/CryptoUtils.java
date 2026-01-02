@@ -1,4 +1,5 @@
 package model;
+
 import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -10,7 +11,7 @@ import java.util.Base64;
 
 public class CryptoUtils {
 
-    public KeyPair generateKeyPair(){
+    public KeyPair generateKeyPair() {
         try {
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
             kpg.initialize(2048);
@@ -20,7 +21,19 @@ public class CryptoUtils {
         }
     }
 
-    public String sign(String data, KeyPair keyPair){
+    public KeyPair generateKeyPair(String seed) {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("RSA");
+            java.security.SecureRandom random = java.security.SecureRandom.getInstance("SHA1PRNG");
+            random.setSeed(seed.getBytes(StandardCharsets.UTF_8));
+            kpg.initialize(2048, random);
+            return kpg.generateKeyPair();
+        } catch (Exception e) {
+            throw new RuntimeException("Error generating deterministic key pair", e);
+        }
+    }
+
+    public String sign(String data, KeyPair keyPair) {
         try {
             PrivateKey privateKey = keyPair.getPrivate();
             Signature sig = Signature.getInstance("SHA256withRSA");
@@ -33,7 +46,7 @@ public class CryptoUtils {
         }
     }
 
-    public boolean verify(String data, String signature, KeyPair keyPair){
+    public boolean verify(String data, String signature, KeyPair keyPair) {
         try {
             PublicKey publicKey = keyPair.getPublic();
             Signature sig = Signature.getInstance("SHA256withRSA");
@@ -46,7 +59,7 @@ public class CryptoUtils {
         }
     }
 
-    public String hash(String data){
+    public String hash(String data) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             byte[] digest = md.digest(data.getBytes(StandardCharsets.UTF_8));
@@ -60,5 +73,3 @@ public class CryptoUtils {
         }
     }
 }
-
-

@@ -1,7 +1,11 @@
 package model;
+
 import java.security.KeyPair;
 
-public class Transaction {
+import java.io.Serializable;
+
+public class Transaction implements Serializable {
+    private static final long serialVersionUID = 1L;
     public String fromAddress;
     public String toAddress;
     public float amount;
@@ -26,21 +30,25 @@ public class Transaction {
 
     // CALCULA EL HASH
     public String calculateHash() {
-        String data = (fromAddress == null ? "" : fromAddress) + (toAddress == null ? "" : toAddress) + amount + fee + (signature == null ? "" : signature);
+        String data = (fromAddress == null ? "" : fromAddress) + (toAddress == null ? "" : toAddress) + amount + fee
+                + (signature == null ? "" : signature);
         return new CryptoUtils().hash(data);
     }
 
     // firma
     public void signTransaction(KeyPair keyPair) {
-        if (keyPair == null) throw new IllegalArgumentException("KeyPair requerido para firmar");
+        if (keyPair == null)
+            throw new IllegalArgumentException("KeyPair requerido para firmar");
         CryptoUtils crypto = new CryptoUtils();
         this.signature = crypto.sign(calculateHash(), keyPair);
     }
 
     // se fija si la transaccion es valida por las firmas
     public boolean isValid() {
-        if (this.fromAddress == null) return true; // recompensa
-        if (this.signature == null) return false; // si no esta firmada se invalida
+        if (this.fromAddress == null)
+            return true; // recompensa
+        if (this.signature == null)
+            return false; // si no esta firmada se invalida
         return true;
     }
 }
